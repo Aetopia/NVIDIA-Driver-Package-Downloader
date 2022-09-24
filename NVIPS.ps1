@@ -1,4 +1,4 @@
-function Get-NVGPU {
+function Get-NVGPUData {
     # Get the NVIDIA GPU information.
     
     $pciids = (Invoke-RestMethod "https://raw.githubusercontent.com/pciutils/pciids/master/pci.ids").Split("`n")
@@ -48,11 +48,11 @@ function Get-NVGPU {
     }
 }
 
-function Get-NVGPUInfo {
+function Get-NVGPU {
     param ([switch]$studio, [switch]$standard)
 
     $whql, $dtcid, $vers = 1, 1, @()
-    $gpu=Get-NVGPU
+    $gpu=Get-NVGPUData
     if ($studio) {
         $whql = 0
     }
@@ -77,16 +77,16 @@ function Get-NVGPUInfo {
 function Invoke-NVDriver {
     param([int]$version, [switch]$studio, [switch]$standard, [string]$directory = "$ENV:TEMP", [switch]$full)
 
-    $obj = Get-NVGPUInfo -studio:$studio -standard:$standard
+    $gpu = Get-NVGPU -studio:$studio -standard:$standard
     $channel, $nsd, $type, $dir = '', '', '-dch', $directory
-    $plat, $quadro = 'desktop', $obj.Quadro
+    $plat, $quadro = 'desktop', $gpu.Quadro
     
     if ((get-wmiobject Win32_SystemEnclosure).ChassisTypes -in @(8, 9, 10, 11, 12, 14, 18, 21)) {
         $plat = 'notebook'
     }
 
     if ($version -eq 0) {
-        [string] $version = $obj.Versions[0]
+        [string] $version = $gpu.Versions[0]
     }
 
     if ($studio) {
