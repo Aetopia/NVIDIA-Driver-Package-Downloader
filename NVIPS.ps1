@@ -42,18 +42,17 @@ function Get-NVGPU {
                 if ($i.Name.ToLower() -like "*quadro*") {
                     $quadro = $true
                 }
-                return [ordered]@{GPU = $i.Name; PSID = $i.ParentID; PFID = $i.Value; Quadro = $quadro }
+                return [ordered]@{GPU=$i.Name;PSID=$i.ParentID;PFID=$i.Value;Quadro= $quadro} 
             }
         }
     }
 }
 
-function Get-NVQuery {
-
+function Get-NVGPUInfo {
     param ([switch]$studio, [switch]$standard)
 
     $whql, $dtcid, $vers = 1, 1, @()
-    $gpu = Get-NVGPU
+    $gpu=Get-NVGPU
     if ($studio) {
         $whql = 0
     }
@@ -72,22 +71,22 @@ function Get-NVQuery {
             $vers += [string]$i
         }
     }
-    return [ordered]@{Versions = $($vers | Sort-Object -Descending); Quadro = $($gpu.Quadro) }
+    return [ordered]@{GPU = $gpu.GPU; Versions = $($vers | Sort-Object -Descending); Quadro = $($gpu.Quadro) }
 }
 
 function Invoke-NVDriver {
     param([int]$version, [switch]$studio, [switch]$standard, [string]$directory = "$ENV:TEMP", [switch]$full)
-    $channel, $nsd, $type, $dir = '', '', '-dch', $directory
-    $plat, $quadro = 'desktop', $false
 
+    $obj = Get-NVGPUInfo -studio:$studio -standard:$standard
+    $channel, $nsd, $type, $dir = '', '', '-dch', $directory
+    $plat, $quadro = 'desktop', $obj.Quadro
+    
     if ((get-wmiobject Win32_SystemEnclosure).ChassisTypes -in @(8, 9, 10, 11, 12, 14, 18, 21)) {
         $plat = 'notebook'
     }
 
     if ($version -eq 0) {
-        $obj = Get-NVDriverVersions -studio:$studio -standard:$standard
         [string] $version = $obj.Versions[0]
-        $quadro = $obj.Quadro
     }
 
     if ($studio) {
@@ -159,3 +158,4 @@ function Expand-NVDriver {
     Set-Content "$fp" -Value $f -Encoding UTF8
     cmd.exe /c "explorer.exe /select,""$output\setup.exe"""
 }
+
