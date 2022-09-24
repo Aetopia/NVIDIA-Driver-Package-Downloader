@@ -42,14 +42,13 @@ function Get-NVGPU {
                 if ($i.Name.ToLower() -like "*quadro*") {
                     $quadro = $true
                 }
-                return [ordered]@{Name = $i.Name; PSID = $i.ParentID; PFID = $i.Value; Quadro = $quadro }
+                return [ordered]@{GPU = $i.Name; PSID = $i.ParentID; PFID = $i.Value; Quadro = $quadro }
             }
         }
     }
 }
 
-function Get-NVDriverVersions {
-    # Get NVIDIA driver versions.
+function Get-NVQuery {
 
     param ([switch]$studio, [switch]$standard)
 
