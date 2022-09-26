@@ -19,7 +19,7 @@ function Get-NVGPU {
             (($hwid -Split "VEN_10DE&DEV_") -Split "&SUBSYS")[1].Trim().ToLower()
         }
     } 
-    for ($i = 0; $i -ne $pciids.length; $i++) {
+    :master for ($i = 0; $i -ne $pciids.length; $i++) {
         $x = $pciids[$i]
         if (!($x.startswith("#"))) {
             if ($x.startswith("10de")) {
@@ -37,22 +37,21 @@ function Get-NVGPU {
                             }
                         }
                         else {
-                            break
+                            break master
                         }
                     }
                 }
-                break
             }
         }
     }
-    foreach ($i in $gpus) {
+    :master foreach ($i in $gpus) {
         foreach ($dev in $devs) {
             if ($i.Name -eq $dev) {
                 if ($i.Name.ToLower() -like "*quadro*") {
                     $quadro = $true
                 }
                 $gpu = $i
-                break
+                break master
             }
         }
     }
@@ -112,7 +111,7 @@ function Invoke-NVDriver {
         }
         catch [System.Net.WebException] {}
     }
-    if (!($success)){
+    if (!($success)) {
         Write-Error "Couldn't find driver version $version." -ErrorAction Stop
     }
     if ($full -eq $true) {
