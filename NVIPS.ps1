@@ -68,14 +68,14 @@ function Get-NVGPU {
             if ($i -like "*(*)*") {
                 $i = $i.Split("(", 2)[1].Trim(")")
             }
-            $vers += [float]$i
+            $vers += [string]$i
         }
     }
     return [ordered]@{GPU = $gpu.Name; Versions = $($vers | Sort-Object -Descending); Quadro = $quadro }
 }
 
 function Invoke-NVDriver {
-    param([float]$version, [switch]$studio, [switch]$standard, [string]$directory = "$ENV:TEMP", [switch]$full)
+    param([string]$version, [switch]$studio, [switch]$standard, [string]$directory = "$ENV:TEMP", [switch]$full)
 
     $gpu = Get-NVGPU -studio:$studio -standard:$standard
     $channel, $nsd, $type, $dir = '', '', '-dch', $directory
