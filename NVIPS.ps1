@@ -57,7 +57,7 @@ function Get-NVGPU {
         }
     }
 
-    if ($null -eq $gpu) {Write-Error "Couldn't detect NVIDIA GPU." -ErrorAction Stop}
+    if ($null -eq $gpu) { Write-Error "Couldn't detect NVIDIA GPU." -ErrorAction Stop }
     # Get Driver Versions.
     $link = "https://www.nvidia.com/Download/processFind.aspx?psid=$($gpu.ParentID)&pfid=$($gpu.Value)&osid=57&lid=1&whql=$whql&ctk=0&dtcid=$dtcid"
     $f = (Invoke-RestMethod "$link").Split("`n") | ForEach-Object { $_.Trim() }
@@ -100,16 +100,20 @@ function Invoke-NVDriver {
         $plat = 'quadro-rtx-desktop-notebook'
     }
 
-    $output = "$dir\NVIDIA - $version.exe"
+    $output, $success = "$dir\NVIDIA - $version.exe", $false
 
     foreach ($winver in @("win10-win11", "win10")) {
         $link = "https://international.download.nvidia.com/Windows/$channel$version/$version-$plat-$winver-64bit-international$nsd$type-whql.exe"
         try { 
             if ((Invoke-WebRequest -UseBasicParsing -Method Head -Uri "$link").StatusCode -eq 200) {
-                curl.exe -L -# "$link" -o "$output" 
+                $success = $true
+                curl.exe -L -# "$link" -o "$output"
             }
         }
         catch [System.Net.WebException] {}
+    }
+    if (!($success)){
+        Write-Error "Couldn't find driver version $version." -ErrorAction Stop
     }
     if ($full -eq $true) {
         cmd.exe /c "explorer.exe /select,""$output"""
