@@ -86,7 +86,7 @@ function Invoke-NVDriver {
     }
 
     if ($version -eq 0) {
-        [string] $version = $gpu.Versions[0]
+        $version = $gpu.Versions[0]
     }
 
     if ($studio) {
