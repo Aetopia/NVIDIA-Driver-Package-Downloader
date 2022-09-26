@@ -1,9 +1,18 @@
-function Get-NVGPUData {
-    # Get the NVIDIA GPU information.
-    
+function Get-NVGPU {
+    param ([switch]$studio, [switch]$standard)
+
+    $whql, $dtcid, $vers, $devs, $quadro, $gpu = 1, 1, @(), @(), $false, $null
+
+    if ($studio) {
+        $whql = 0
+    }
+    if ($standard) {
+        $dtcid = 0
+    }
+
+    # Detect NVIDIA Hardware.
     $pciids = (Invoke-RestMethod "https://raw.githubusercontent.com/pciutils/pciids/master/pci.ids").Split("`n")
     $gpus = (Invoke-RestMethod "https://www.nvidia.com/Download/API/lookupValueSearch.aspx?TypeID=3").LookupValueSearch.LookupValues.LookupValue
-    $devs, $quadro = @(), $false
     $hwids = foreach ($key in (Get-ChildItem "HKLM:\SYSTEM\CurrentControlSet\Enum\PCI")) {
         $hwid = (Split-Path -Leaf $key.Name)
         if ($hwid.startswith("VEN_10DE")) {
@@ -42,24 +51,15 @@ function Get-NVGPUData {
                 if ($i.Name.ToLower() -like "*quadro*") {
                     $quadro = $true
                 }
-                return [ordered]@{GPU=$i.Name;PSID=$i.ParentID;PFID=$i.Value;Quadro= $quadro} 
+                $gpu = $i
+                break
             }
         }
     }
-}
 
-function Get-NVGPU {
-    param ([switch]$studio, [switch]$standard)
-
-    $whql, $dtcid, $vers = 1, 1, @()
-    $gpu=Get-NVGPUData
-    if ($studio) {
-        $whql = 0
-    }
-    if ($standard) {
-        $dtcid = 0
-    }
-    $link = "https://www.nvidia.com/Download/processFind.aspx?psid=$($gpu.PSID)&pfid=$($gpu.PFID)&osid=57&lid=1&whql=$whql&ctk=0&dtcid=$dtcid"
+    if ($null -eq $gpu) {Write-Error "Couldn't detect NVIDIA GPU." -ErrorAction Stop}
+    # Get Driver Versions.
+    $link = "https://www.nvidia.com/Download/processFind.aspx?psid=$($gpu.ParentID)&pfid=$($gpu.Value)&osid=57&lid=1&whql=$whql&ctk=0&dtcid=$dtcid"
     $f = (Invoke-RestMethod "$link").Split("`n") | ForEach-Object { $_.Trim() }
     
     foreach ($i in $f) {
@@ -68,14 +68,14 @@ function Get-NVGPU {
             if ($i -like "*(*)*") {
                 $i = $i.Split("(", 2)[1].Trim(")")
             }
-            $vers += [string]$i
+            $vers += [float]$i
         }
     }
-    return [ordered]@{GPU = $gpu.GPU; Versions = $($vers | Sort-Object -Descending); Quadro = $($gpu.Quadro) }
+    return [ordered]@{GPU = $gpu.Name; Versions = $($vers | Sort-Object -Descending); Quadro = $quadro }
 }
 
 function Invoke-NVDriver {
-    param([int]$version, [switch]$studio, [switch]$standard, [string]$directory = "$ENV:TEMP", [switch]$full)
+    param([float]$version, [switch]$studio, [switch]$standard, [string]$directory = "$ENV:TEMP", [switch]$full)
 
     $gpu = Get-NVGPU -studio:$studio -standard:$standard
     $channel, $nsd, $type, $dir = '', '', '-dch', $directory
@@ -106,7 +106,7 @@ function Invoke-NVDriver {
         $link = "https://international.download.nvidia.com/Windows/$channel$version/$version-$plat-$winver-64bit-international$nsd$type-whql.exe"
         try { 
             if ((Invoke-WebRequest -UseBasicParsing -Method Head -Uri "$link").StatusCode -eq 200) {
-                curl.exe -L -# "$link" -o "$output"  
+                curl.exe -L -# "$link" -o "$output" 
             }
         }
         catch [System.Net.WebException] {}
