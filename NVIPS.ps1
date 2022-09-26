@@ -67,7 +67,7 @@ function Get-NVGPU {
             if ($i -like "*(*)*") {
                 $i = $i.Split("(", 2)[1].Trim(")")
             }
-            $vers += [string]$i
+            $vers += [string]$i.Trim()
         }
     }
     return [ordered]@{GPU = $gpu.Name; Versions = $($vers | Sort-Object -Descending); Quadro = $quadro }
@@ -84,7 +84,7 @@ function Invoke-NVDriver {
         $plat = 'notebook'
     }
 
-    if ($version -eq 0) {
+    if ($version -eq "") {
         $version = $gpu.Versions[0]
     }
 
@@ -122,7 +122,6 @@ function Invoke-NVDriver {
     }
 
 }
-
 function Expand-NVDriver {
     param([string]$file, [string]$directory = "$ENV:TEMP")
     $dir = "$directory"
