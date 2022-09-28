@@ -13,32 +13,25 @@ function Get-NVGPU {
     # Detect NVIDIA Hardware.
     $pciids = (Invoke-RestMethod "https://raw.githubusercontent.com/pciutils/pciids/master/pci.ids").Split("`n")
     $gpus = (Invoke-RestMethod "https://www.nvidia.com/Download/API/lookupValueSearch.aspx?TypeID=3").LookupValueSearch.LookupValues.LookupValue
-    $hwids = foreach ($key in (Get-ChildItem "HKLM:\SYSTEM\CurrentControlSet\Enum\PCI")) {
-        $hwid = (Split-Path -Leaf $key.Name)
+    $hwids = Get-ChildItem "HKLM:\SYSTEM\CurrentControlSet\Enum\PCI" | ForEach-Object {
+        $hwid = (Split-Path -Leaf $_.Name)
         if ($hwid.startswith("VEN_10DE")) {
-            (($hwid -Split "VEN_10DE&DEV_") -Split "&SUBSYS")[1].Trim().ToLower()
+                (($hwid -Split "VEN_10DE&DEV_") -Split "&SUBSYS")[1].Trim().ToLower()
         }
     } 
-    :master for ($i = 0; $i -ne $pciids.length; $i++) {
-        $x = $pciids[$i]
-        if (!($x.startswith("#"))) {
-            if ($x.startswith("10de")) {
-                for ($j = $i; $j -ne $pciids.length; $j++) {
-                    $y = $pciids[$j]
-                    if (!($y.startswith("#"))) {
-                        if (!($y.startswith("10df"))) {
-                            if (!($y.startswith("`t`t"))) {
-                                $id, $name = ($y.Trim("`t").Split(" ", 2))
-                                foreach ($hwid in $hwids) {
-                                    if ($hwid -eq $id) {
-                                        $devs += $name.Trim().Split(" ", 2)[1].TrimStart("[").TrimEnd("]").Trim()
-                                    }
-                                }
-                            }
-                        }
-                        else {
-                            break master
-                        }
+    foreach ($i in $pciids) {
+        if ($i.startswith("10de")) {
+            $nvidia = $true
+        }
+        elseif ($i.StartsWith("10df")) {
+            break
+        }
+        if ($nvidia) {
+            if (($i[0] -eq "`t") -and ($i[1] -ne "`t")) {
+                $id, $name = ($i.Trim("`t").Split(" ", 2))
+                foreach ($hwid in $hwids) {
+                    if ($hwid -eq $id) {
+                        $devs += $name.Trim().Split(" ", 2)[1].TrimStart("[").TrimEnd("]").Trim()
                     }
                 }
             }
@@ -112,7 +105,7 @@ function Invoke-NVDriver {
         catch [System.Net.WebException] {}
     }
     if (!($success)) {
-        Write-Error "Couldn't find driver version $version." -ErrorAction Stop
+        Write-Error "Couldn't find driver version $version.".Trim() -ErrorAction Stop
     }
     if ($full -eq $true) {
         cmd.exe /c "explorer.exe /select,""$output"""
@@ -139,7 +132,7 @@ function Expand-NVDriver {
     $f = [System.Collections.ArrayList]((Get-Content "$fp" -Encoding UTF8) -Split "`n")
     foreach ($i in @('<file name="${{EulaHtmlFile}}"/>', 
             '<file name="${{PrivacyPolicyFile}}"/>', 
-            '<file name="${{FunctionalConsentFile}}"/>', "")) {
+            '<file name="${{FunctionalConsentFile}}"/>')) {
         $f.Remove("`t`t$i")
     }
     Set-Content "$fp" -Value $f -Encoding UTF8
@@ -160,4 +153,3 @@ function Expand-NVDriver {
     Set-Content "$fp" -Value $f -Encoding UTF8
     cmd.exe /c "explorer.exe /select,""$output\setup.exe"""
 }
-
