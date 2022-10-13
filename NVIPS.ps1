@@ -4,7 +4,7 @@ function Get-NVGPU {
     $whql, $dtcid, $vers, $devs, $quadro, $gpu = 1, 1, @(), @(), $false, $null
 
     if ($studio) {
-        $whql = 0
+        $whql = 4
     }
     if ($standard) {
         $dtcid = 0
