@@ -35,10 +35,12 @@ This program serves the launcher for the NVIDIA Control Panel, although you don'
     > Run the tool 2 ~ 3 times to ensure it is correctly installed on your system.          
     > If Nim isn't in your system's `PATH`, reboot.
 2. Install `winim` > Nim's Windows API and COM Library:
+
    ```cmd
    nimble install winim
    ```
 3. Run the following command to compile the launcher:
+
    ```cmd
    nim c -d:release --app:gui --opt:size nvcpl.nim
    ```
