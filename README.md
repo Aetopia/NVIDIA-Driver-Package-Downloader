@@ -4,7 +4,7 @@ A simple powershell script to extract and download NVIDIA driver packages.
 
 # Usage
 
-1. Open PowerShell.
+1. Open PowerShell as an Admin.
 2. Copy and paste the following command:
     ```ps
     irm "https://raw.githubusercontent.com/Aetopia/NVIPS/main/NVIPS.ps1" | iex
@@ -24,3 +24,28 @@ A simple powershell script to extract and download NVIDIA driver packages.
         3. `-Standard` | Standard driver type.
         4. `-Directory <Directory>` | Output Directory
         5. `-Full` | Download an entire driver package. 
+    
+    4. `Install-NVCPL` | Install the UWP NVIDIA Control Panel as a Win32 application. 
+
+# NVIDIA Control Panel Launcher
+This program serves the launcher for the NVIDIA Control Panel, although you don't need it for the control panel itself, it essentially supresses the `NVIDIA Control Panel is not installed!` prompt from popping up since the UWP control panel isn't installed.
+
+## Building
+1. Install Nim using: https://github.com/dom96/choosenim
+    > Run the tool 2 ~ 3 times to ensure it is correctly installed on your system.          
+    > If Nim isn't in your system's `PATH`, reboot.
+2. Install `winim` > Nim's Windows API and COM Library:
+   ```cmd
+   nimble install winim
+   ```
+3. Run the following command to compile the launcher:
+   ```cmd
+   nim c -d:release --app:gui --opt:size nvcpl.nim
+   ```
+   >Optional: Compress using UPX.
+   >```
+   >upx -8 nvcpl.exe
+   >```
+4. Now simply extract the NVIDIA Control Panel APPX package as a `.zip` archive. 
+   Can be found in `Display.Driver\NVCPL` within an extracted driver package.
+5. Place `nvcpl.exe` in the directory and run it.

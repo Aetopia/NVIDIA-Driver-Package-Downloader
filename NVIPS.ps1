@@ -1,3 +1,4 @@
+#Requires -RunAsAdministrator
 function Get-NVGPU {
     param ([switch]$studio, [switch]$standard)
 
@@ -120,6 +121,7 @@ function Expand-NVDriver {
     $dir = "$directory"
     $components = "Display.Driver NVI2 EULA.txt ListDevices.txt setup.cfg setup.exe"
     $output = "$dir\$(((Split-Path -Leaf "$file") -split ".exe", 2, "simplematch").Trim())".Trim()
+    Remove-Item -Path "$output" -Recurse -Force -ErrorAction SilentlyContinue
     if ((Test-Path "$output")) {
         Remove-Item "$output" -Force -Recurse
     }
@@ -152,4 +154,18 @@ function Expand-NVDriver {
     }
     Set-Content "$fp" -Value $f -Encoding UTF8
     cmd.exe /c "explorer.exe /select,""$output\setup.exe"""
+    Set-Content "$ENV:TEMP\nvcpl.txt" "$output\Display.Driver\NVCPL" -Encoding UTF8
 }
+
+function Install-NVCPL {
+    $txt = "$ENV:TEMP\nvcpl.txt"
+    if (-Not(Test-Path "$txt")) {
+        Write-Error "Please download and extract a driver package using Invoke-NVDriver | Expand-NVDriver!" -ErrorAction Stop
+    }
+    $appx = ((Get-ChildItem (Get-Content "$txt" -Encoding UTF8) | Where-Object {$_ -like "*.appx"}).FullName)
+    $zip = "$(Split-Path $appx)\$((Get-Item $appx).BaseName).zip"  
+    $dir = "$ENV:PROGRAMDATA\NVIDIA Corporation\NVCPL"
+    Expand-Archive "$zip" "$dir" -Force 
+    Set-Content "$ENV:PROGRAMDATA\Microsoft\Windows\Start Menu\Programs\NVIDIA Control Panel.url" "[InternetShortcut]`nURL=file:///$dir\nvcpl.exe`nIconIndex=0`nIconFile=$dir\nvcplui.exe" -Encoding UTF8
+}
+Install-NVCPL
