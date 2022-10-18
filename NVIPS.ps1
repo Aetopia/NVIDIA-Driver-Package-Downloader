@@ -165,9 +165,12 @@ function Install-NVCPL {
     $appx = ((Get-ChildItem (Get-Content "$txt" -Encoding UTF8) | Where-Object {$_ -like "*.appx"}).FullName)
     $zip = "$(Split-Path $appx)\$((Get-Item $appx).BaseName).zip"  
     $dir = "$ENV:PROGRAMDATA\NVIDIA Corporation\NVCPL"
-    Remove-Item "$dir" -Recurse -Force -ErrorAction SilentlyContinue
+    $url = "$ENV:PROGRAMDATA\Microsoft\Windows\Start Menu\Programs\NVIDIA Control Panel.url"
+    foreach ($i in ("$dir", "$url")) {
+        Remove-Item "$dir" -Recurse -Force -ErrorAction SilentlyContinue
+    }
     Expand-Archive "$zip" "$dir" -Force 
     curl.exe -#L "$((Invoke-RestMethod "https://api.github.com/repos/Aetopia/NVIPS/releases/latest").assets.browser_download_url)" -o "$dir\nvcpl.exe"
-    Set-Content "$ENV:PROGRAMDATA\Microsoft\Windows\Start Menu\Programs\NVIDIA Control Panel.url" "[InternetShortcut]`nURL=file:///$dir\nvcpl.exe`nIconIndex=0`nIconFile=$dir\nvcplui.exe" -Encoding UTF8
+    Set-Content  "[InternetShortcut]`nURL=file:///$dir\nvcpl.exe`nIconIndex=0`nIconFile=$dir\nvcplui.exe" -Encoding UTF8
     Write-Output "NVIDIA Control Panel Installed!"
 }
