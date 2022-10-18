@@ -166,7 +166,7 @@ function Install-NVCPL {
     $zip = "$(Split-Path $appx)\$((Get-Item $appx).BaseName).zip"  
     $dir = "$ENV:PROGRAMDATA\NVIDIA Corporation\NVCPL"
     $url = "$ENV:PROGRAMDATA\Microsoft\Windows\Start Menu\Programs\NVIDIA Control Panel.url"
-    foreach ($i in ("$dir", "$url")) {
+    foreach ($i in ($dir, $url)) {
         Remove-Item "$dir" -Recurse -Force -ErrorAction SilentlyContinue
     }
     Expand-Archive "$zip" "$dir" -Force 
