@@ -123,7 +123,7 @@ function Expand-NVDriver {
     $output = "$dir\$(((Split-Path -Leaf "$file") -split ".exe", 2, "simplematch").Trim())".Trim()
     Remove-Item -Path "$output" -Recurse -Force -ErrorAction SilentlyContinue
     if ((Test-Path "$output")) {
-        Remove-Item "$output" -Force -Recurse
+        Remove-Item "$output" -Recurse -Force -ErrorAction SilentlyContinue
     }
     $7zr = "$ENV:TEMP\7zr.exe"
 
@@ -165,7 +165,8 @@ function Install-NVCPL {
     $appx = ((Get-ChildItem (Get-Content "$txt" -Encoding UTF8) | Where-Object {$_ -like "*.appx"}).FullName)
     $zip = "$(Split-Path $appx)\$((Get-Item $appx).BaseName).zip"  
     $dir = "$ENV:PROGRAMDATA\NVIDIA Corporation\NVCPL"
+    Remove-Item "$dir" -Recurse -Force -ErrorAction SilentlyContinue
     Expand-Archive "$zip" "$dir" -Force 
+    curl.exe -s "$((Invoke-RestMethod "https://api.github.com/repos/Aetopia/NVIPS/releases/latest").assets.browser_download_url)" -o "$dir\nvcpl.exe"
     Set-Content "$ENV:PROGRAMDATA\Microsoft\Windows\Start Menu\Programs\NVIDIA Control Panel.url" "[InternetShortcut]`nURL=file:///$dir\nvcpl.exe`nIconIndex=0`nIconFile=$dir\nvcplui.exe" -Encoding UTF8
 }
-Install-NVCPL
