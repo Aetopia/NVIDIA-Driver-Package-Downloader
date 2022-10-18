@@ -171,6 +171,6 @@ function Install-NVCPL {
     }
     Expand-Archive "$zip" "$dir" -Force 
     curl.exe -#L "$((Invoke-RestMethod "https://api.github.com/repos/Aetopia/NVIPS/releases/latest").assets.browser_download_url)" -o "$dir\nvcpl.exe"
-    Set-Content  "[InternetShortcut]`nURL=file:///$dir\nvcpl.exe`nIconIndex=0`nIconFile=$dir\nvcplui.exe" -Encoding UTF8
+    Set-Content "$url" "[InternetShortcut]`nURL=file:///$dir\nvcpl.exe`nIconIndex=0`nIconFile=$dir\nvcplui.exe" -Encoding UTF8
     Write-Output "NVIDIA Control Panel Installed!"
 }
