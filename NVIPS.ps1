@@ -1,4 +1,5 @@
 #Requires -RunAsAdministrator
+$global:ProgressPreference = "SilentlyContinue"
 function Get-NVGPU {
     param ([switch]$studio, [switch]$standard)
 
@@ -167,9 +168,11 @@ function Install-NVCPL {
     $dir = "$ENV:PROGRAMDATA\NVIDIA Corporation\NVCPL"
     $url = "$ENV:PROGRAMDATA\Microsoft\Windows\Start Menu\Programs\NVIDIA Control Panel.url"
     foreach ($i in ($dir, $url)) {
-        Remove-Item "$dir" -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item "$i" -Recurse -Force -ErrorAction SilentlyContinue
     }
-    Expand-Archive "$zip" "$dir" -Force 
+    Copy-Item "$appx" "$zip"
+    Expand-Archive "$zip" "$dir" -Force | Out-Null
+    Write-Output "Fetching NVIDIA Control Panel Launcher..."
     curl.exe -#L "$((Invoke-RestMethod "https://api.github.com/repos/Aetopia/NVIPS/releases/latest").assets.browser_download_url)" -o "$dir\nvcpl.exe"
     Set-Content "$url" "[InternetShortcut]`nURL=file:///$dir\nvcpl.exe`nIconIndex=0`nIconFile=$dir\nvcplui.exe" -Encoding UTF8
     Write-Output "NVIDIA Control Panel Installed!"
