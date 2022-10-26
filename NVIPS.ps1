@@ -21,6 +21,7 @@ function Get-NVGPU {
                 (($hwid -Split "VEN_10DE&DEV_") -Split "&SUBSYS")[1].Trim().ToLower()
         }
     } 
+
     foreach ($i in $pciids) {
         if ($i.startswith("10de")) {
             $nvidia = $true
@@ -41,8 +42,9 @@ function Get-NVGPU {
     }
     :master foreach ($i in $gpus) {
         foreach ($dev in $devs) {
-            if ($i.Name -eq $dev) {
-                if ($i.Name.ToLower() -like "*quadro*") {
+            $name, $dev = $i.Name.ToLower(), $dev.ToLower()
+            if ($dev -like "$($name)*") {
+                if ($name -like "*quadro*") {
                     $quadro = $true
                 }
                 $gpu = $i
