@@ -1,5 +1,5 @@
-#Requires -RunAsAdministrator
 $global:ProgressPreference = "SilentlyContinue"
+
 function Get-NVGPU {
     param ([switch]$studio, [switch]$standard)
 
@@ -51,27 +51,38 @@ function Get-NVGPU {
         }
     }
 
-    if ($null -eq $gpu) { Write-Error "Couldn't detect NVIDIA GPU." -ErrorAction Stop }
-    # Get Driver Versions.
-    $link = "https://www.nvidia.com/Download/processFind.aspx?psid=$($gpu.ParentID)&pfid=$($gpu.Value)&osid=57&lid=1&whql=$whql&ctk=0&dtcid=$dtcid"
-    $f = (Invoke-RestMethod "$link").Split("`n") | ForEach-Object { $_.Trim() }
-    
-    foreach ($i in $f) {
-        if (($i -like "<td class=""gridItem"">*.*</td>") -and ($i -notlike "<td class=""gridItem"">*`<img*")) {
-            $i = $i.Trim("<td class=""gridItem"">").Trim("</td>")
-            if ($i -like "*(*)*") {
-                $i = $i.Split("(", 2)[1].Trim(")")
+    if (-Not($null -eq $gpu)) { 
+        # Get Driver Versions.
+        $link = "https://www.nvidia.com/Download/processFind.aspx?psid=$($gpu.ParentID)&pfid=$($gpu.Value)&osid=57&lid=1&whql=$whql&ctk=0&dtcid=$dtcid"
+        $f = (Invoke-RestMethod "$link").Split("`n") | ForEach-Object { $_.Trim() }
+        
+        foreach ($i in $f) {
+            if (($i -like "<td class=""gridItem"">*.*</td>") -and ($i -notlike "<td class=""gridItem"">*`<img*")) {
+                $i = $i.Trim("<td class=""gridItem"">").Trim("</td>")
+                if ($i -like "*(*)*") {
+                    $i = $i.Split("(", 2)[1].Trim(")")
+                }
+                $vers += [string]$i.Trim()
             }
-            $vers += [string]$i.Trim()
         }
     }
-    return [ordered]@{GPU = $gpu.Name; Versions = $($vers | Sort-Object -Descending); Quadro = $quadro }
+    return [ordered]@{GPU = $gpu.Name; Versions = $($vers | Sort-Object -Descending); Quadro = $quadro; Debug = @($devs, ($hwids | ForEach-Object { $_.ToUpper() })) }
 }
 
 function Invoke-NVDriver {
-    param([string]$version, [switch]$studio, [switch]$standard, [string]$directory = "$ENV:TEMP", [switch]$full)
+    param(
+        $gpu = $null, 
+        [string]$version, 
+        [switch]$studio, 
+        [switch]$standard, 
+        [string]$directory = "$ENV:TEMP", 
+        [switch]$full, 
+        [switch]$info
+    )
 
-    $gpu = Get-NVGPU -studio:$studio -standard:$standard
+    if ($null -eq $gpu) { $gpu = Get-NVGPU -studio:$studio -standard:$standard }
+    Write-Output "
+    Name: $($gpu.Name)"
     $channel, $nsd, $type, $dir = '', '', '-dch', $directory
     $plat, $quadro = 'desktop', $gpu.Quadro
     
@@ -101,7 +112,7 @@ function Invoke-NVDriver {
         try { 
             if ((Invoke-WebRequest -UseBasicParsing -Method Head -Uri "$link").StatusCode -eq 200) {
                 $success = $true
-                curl.exe -L -# "$link" -o "$output"
+                curl.exe -#L "$link" -o "$output"
             }
         }
         catch [System.Net.WebException] {}
@@ -109,18 +120,15 @@ function Invoke-NVDriver {
     if (!($success)) {
         Write-Error "Couldn't find driver version $version.".Trim() -ErrorAction Stop
     }
-    if ($full -eq $true) {
-        cmd.exe /c "explorer.exe /select,""$output"""
-    }
-    else {
-        Expand-NVDriver -file "$output" -dir "$dir"  
-    }
+    Expand-NVDriver -file "$output" -dir "$dir" -full:$full  
+
 
 }
 function Expand-NVDriver {
-    param([string]$file, [string]$directory = "$ENV:TEMP")
+    param([string]$file, [string]$directory = "$ENV:TEMP", [switch]$full)
     $dir = "$directory"
     $components = "Display.Driver NVI2 EULA.txt ListDevices.txt setup.cfg setup.exe"
+    if ($full) { $components = "" }
     $output = "$dir\$(((Split-Path -Leaf "$file") -split ".exe", 2, "simplematch").Trim())".Trim()
     Remove-Item -Path "$output" -Recurse -Force -ErrorAction SilentlyContinue
     if ((Test-Path "$output")) {
@@ -129,7 +137,7 @@ function Expand-NVDriver {
     $7zr = "$ENV:TEMP\7zr.exe"
 
     curl.exe -s "https://www.7-zip.org/a/7zr.exe" -o "$7zr"
-    cmd.exe /c """$7zr"" x -bso0 -bsp1 -bse1 -aoa ""$file"" $components -o""$output"""
+    Invoke-Expression "& ""$7zr"" x -bso0 -bsp1 -bse1 -aoa ""$file"" $components -o""$output"""
 
     $fp = "$output/setup.cfg"
     $f = [System.Collections.ArrayList]((Get-Content "$fp" -Encoding UTF8) -Split "`n")
@@ -154,16 +162,19 @@ function Expand-NVDriver {
         $f[$index[$i]] = "`t`t$($x[$i]) """"/>"
     }
     Set-Content "$fp" -Value $f -Encoding UTF8
-    cmd.exe /c "explorer.exe /select,""$output\setup.exe"""
     Set-Content "$ENV:TEMP\nvcpl.txt" "$output\Display.Driver\NVCPL" -Encoding UTF8
+    Start-Process "$output\setup.exe" -ErrorAction Ignore
 }
 
 function Install-NVCPL {
+    if (-Not(New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+        Write-Error "Please run this script as an Administrator!" -ForegroundColor Red
+    }
     $txt = "$ENV:TEMP\nvcpl.txt"
     if (-Not(Test-Path "$txt")) {
         Write-Error "Please download and extract a driver package using Invoke-NVDriver | Expand-NVDriver!" -ErrorAction Stop
     }
-    $appx = ((Get-ChildItem (Get-Content "$txt" -Encoding UTF8) | Where-Object {$_ -like "*.appx"}).FullName)
+    $appx = ((Get-ChildItem (Get-Content "$txt" -Encoding UTF8) | Where-Object { $_ -like "*.appx" }).FullName)
     $zip = "$(Split-Path $appx)\$((Get-Item $appx).BaseName).zip"  
     $dir = "$ENV:PROGRAMDATA\NVIDIA Corporation\NVCPL"
     $url = "$ENV:PROGRAMDATA\Microsoft\Windows\Start Menu\Programs\NVIDIA Control Panel.url"
