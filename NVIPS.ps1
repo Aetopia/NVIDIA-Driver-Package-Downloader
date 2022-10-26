@@ -193,6 +193,8 @@ function Install-NVCPL {
     if (-Not(New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
         Write-Error "Please run this script as an Administrator!" -ForegroundColor Red
     }
+    Set-Service "NVDisplay.ContainerLocalSystem" -StartupType Disabled -ErrorAction SilentlyContinue
+    Stop-Service "NVDisplay.ContainerLocalSystem" -ErrorAction SilentlyContinue
     $txt = "$ENV:TEMP\nvcpl.txt"
     if (-Not(Test-Path "$txt")) {
         Write-Error "Please download and extract a driver package using Invoke-NVDriver | Expand-NVDriver!" -ErrorAction Stop
