@@ -3,7 +3,7 @@ $global:ProgressPreference = "SilentlyContinue"
 function Get-NVGPU {
     param ([switch]$studio, [switch]$standard)
 
-    $whql, $dtcid, $vers, $devs, $quadro, $gpu = 1, 1, @(), @(), $false, $null
+    $whql, $dtcid, $vers, $devs, $type, $gpu = 1, 1, @(), @(), $null, $null
 
     if ($studio) {
         $whql = 4
@@ -15,12 +15,15 @@ function Get-NVGPU {
     # Detect NVIDIA Hardware.
     $pciids = (Invoke-RestMethod "https://raw.githubusercontent.com/pciutils/pciids/master/pci.ids").Split("`n")
     $gpus = (Invoke-RestMethod "https://www.nvidia.com/Download/API/lookupValueSearch.aspx?TypeID=3").LookupValueSearch.LookupValues.LookupValue
-    $hwids = Get-ChildItem "HKLM:\SYSTEM\CurrentControlSet\Enum\PCI" | ForEach-Object {
-        $hwid = (Split-Path -Leaf $_.Name)
-        if ($hwid.startswith("VEN_10DE")) {
+    
+    if ($null -eq $hwids) {
+        $hwids = Get-ChildItem "HKLM:\SYSTEM\CurrentControlSet\Enum\PCI" | ForEach-Object {
+            $hwid = (Split-Path -Leaf $_.Name)
+            if ($hwid.startswith("VEN_10DE")) {
                 (($hwid -Split "VEN_10DE&DEV_") -Split "&SUBSYS")[1].Trim().ToLower()
-        }
-    } 
+            }
+        } 
+    }
 
     foreach ($i in $pciids) {
         if ($i.startswith("10de")) {
@@ -42,10 +45,16 @@ function Get-NVGPU {
     }
     :master foreach ($i in $gpus) {
         foreach ($dev in $devs) {
-            $name, $dev = $i.Name.ToLower(), $dev.ToLower()
+            $name, $dev = $i.Name.ToLower().TrimStart("nvidia").Trim(), $dev.ToLower().Trim()
             if ($dev -like "$($name)*") {
-                if ($name -like "*quadro*") {
-                    $quadro = $true
+                if ($name.startswith("quadro")) {
+                    $type = "Quadro"
+                }
+                elseif ($name.startswith("rtx")) {
+                    $type = "Telsa"
+                }
+                else {
+                    $type = "GeForce"
                 }
                 $gpu = $i
                 break master
@@ -68,7 +77,16 @@ function Get-NVGPU {
             }
         }
     }
-    return [ordered]@{GPU = $gpu.Name; Versions = $($vers | Sort-Object -Descending); Quadro = $quadro; Debug = @($devs, ($hwids | ForEach-Object { $_.ToUpper() })) }
+    return [ordered]@{
+        GPU      = $gpu.Name; 
+        Versions = $($vers | Sort-Object -Descending); 
+        Type  = $type; 
+        Debug    = [ordered]@{
+            Devices = $devs; 
+            HWIDS   = ($hwids | ForEach-Object { $_.ToUpper() });
+            Link    = $link 
+        } 
+    }
 }
 
 function Invoke-NVDriver {
@@ -86,7 +104,7 @@ function Invoke-NVDriver {
     Write-Output "
     Name: $($gpu.Name)"
     $channel, $nsd, $type, $dir = '', '', '-dch', $directory
-    $plat, $quadro = 'desktop', $gpu.Quadro
+    $plat, $type = 'desktop', $gpu.Type
     
     if ((get-wmiobject Win32_SystemEnclosure).ChassisTypes -in @(8, 9, 10, 11, 12, 14, 18, 21)) {
         $plat = 'notebook'
@@ -102,9 +120,12 @@ function Invoke-NVDriver {
     if ($standard) {
         $type = ''
     }
-    if ($quadro) {
+    if ($type -eq "Quadro") {
         $channel = 'Quadro_Certified/'
         $plat = 'quadro-rtx-desktop-notebook'
+    }
+    elseif ($type -eq "Telsa") {
+        $plat = 'data-center-tesla-desktop'
     }
 
     $output, $success = "$dir\NVIDIA - $version.exe", $false
