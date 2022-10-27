@@ -99,7 +99,7 @@ function Invoke-NVDriver {
         [switch]$info
     )
 
-    if ($null -eq $gpu) { $gpu = Get-NVGPU -studio:$studio -standard:$standard }R
+    if ($null -eq $gpu) { $gpu = Get-NVGPU -studio:$studio -standard:$standard }
     $channel, $nsd, $type, $dir = '', '', '-dch', $directory
     $plat = 'desktop'
     
