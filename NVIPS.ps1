@@ -99,7 +99,7 @@ function Invoke-NVDriver {
         [switch]$info
     )
 
-    if ($null -eq $gpu) { $gpu = Get-NVGPU -studio:$studio -standard:$standard }
+    if ($null -eq $gpu) { $gpu = Get-NVGPU -studio:$studio -standard:$standard }R
     $channel, $nsd, $type, $dir = '', '', '-dch', $directory
     $plat = 'desktop'
     
@@ -185,7 +185,7 @@ function Expand-NVDriver {
     }
     Set-Content "$fp" -Value $f -Encoding UTF8
     Set-Content "$ENV:TEMP\nvcpl.txt" "$output\Display.Driver\NVCPL" -Encoding UTF8
-    Start-Process "$output\setup.exe" -ErrorAction Ignore
+    Start-Process "$output\setup.exe" -ErrorAction SilentlyContinue
 }
 
 function Install-NVCPL {
