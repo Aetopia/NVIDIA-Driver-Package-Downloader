@@ -80,7 +80,7 @@ function Get-NVGPU {
     return [ordered]@{
         GPU      = $gpu.Name; 
         Versions = $($vers | Sort-Object -Descending); 
-        Type  = $type; 
+        Type     = $type; 
         Debug    = [ordered]@{
             Devices = $devs; 
             HWIDS   = ($hwids | ForEach-Object { $_.ToUpper() });
@@ -91,7 +91,6 @@ function Get-NVGPU {
 
 function Invoke-NVDriver {
     param(
-        $gpu = $null, 
         [string]$version, 
         [switch]$studio, 
         [switch]$standard, 
@@ -101,10 +100,8 @@ function Invoke-NVDriver {
     )
 
     if ($null -eq $gpu) { $gpu = Get-NVGPU -studio:$studio -standard:$standard }
-    Write-Output "
-    Name: $($gpu.Name)"
     $channel, $nsd, $type, $dir = '', '', '-dch', $directory
-    $plat, $type = 'desktop', $gpu.Type
+    $plat = 'desktop'
     
     if ((get-wmiobject Win32_SystemEnclosure).ChassisTypes -in @(8, 9, 10, 11, 12, 14, 18, 21)) {
         $plat = 'notebook'
@@ -120,12 +117,14 @@ function Invoke-NVDriver {
     if ($standard) {
         $type = ''
     }
-    if ($type -eq "Quadro") {
-        $channel = 'Quadro_Certified/'
-        $plat = 'quadro-rtx-desktop-notebook'
-    }
-    elseif ($type -eq "Telsa") {
-        $plat = 'data-center-tesla-desktop'
+    switch ($gpu.Type) {    
+        "Quadro" {
+            $channel = 'Quadro_Certified/'
+            $plat = 'quadro-rtx-desktop-notebook'
+        }
+        "Telsa" {
+            $plat = 'data-center-tesla-desktop'
+        }
     }
 
     $output, $success = "$dir\NVIDIA - $version.exe", $false
