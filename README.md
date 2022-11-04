@@ -34,12 +34,8 @@ This program serves the launcher for the NVIDIA Control Panel, although you don'
 1. Install Nim using: https://github.com/dom96/choosenim
     > Run the tool 2 ~ 3 times to ensure it is correctly installed on your system.          
     > If Nim isn't in your system's `PATH`, reboot.
-2. Install `winim` > Nim's Windows API and COM Library:
 
-   ```cmd
-   nimble install winim
-   ```
-3. Run the following command to compile the launcher:
+2. Run the following command to compile the launcher:
 
    ```cmd
    nim c -d:release --app:gui --opt:size nvcpl.nim
@@ -48,6 +44,6 @@ This program serves the launcher for the NVIDIA Control Panel, although you don'
    >```
    >upx -8 nvcpl.exe
    >```
-4. Now simply extract the NVIDIA Control Panel APPX package as a `.zip` archive.              
+3. Now simply extract the NVIDIA Control Panel APPX package as a `.zip` archive.              
    Can be found in `Display.Driver\NVCPL` within an extracted driver package.
-5. Place `nvcpl.exe` in the directory and run it.
+4. Place `nvcpl.exe` in the directory and run it.
