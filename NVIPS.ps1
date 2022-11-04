@@ -95,8 +95,7 @@ function Invoke-NVDriver {
         [switch]$studio, 
         [switch]$standard, 
         [string]$directory = "$ENV:TEMP", 
-        [switch]$full, 
-        [switch]$info
+        [switch]$full
     )
 
     if ($null -eq $gpu) { $gpu = Get-NVGPU -studio:$studio -standard:$standard }
