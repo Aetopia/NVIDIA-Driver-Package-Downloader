@@ -146,6 +146,7 @@ function Invoke-NVDriver {
     }
     Expand-NVDriver -file "$output" -dir "$dir" -full:$full  
 }
+
 function Expand-NVDriver {
     param(
         [string]$file, 
