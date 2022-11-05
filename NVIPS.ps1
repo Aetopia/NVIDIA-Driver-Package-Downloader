@@ -146,7 +146,11 @@ function Invoke-NVDriver {
 
 }
 function Expand-NVDriver {
-    param([string]$file, [string]$directory = "$ENV:TEMP", [switch]$full)
+    param(
+        [string]$file, 
+        [string]$directory = "$ENV:TEMP", 
+        [switch]$full,
+        [switch]$silent)
     $dir = "$directory"
     $components = "Display.Driver NVI2 EULA.txt ListDevices.txt setup.cfg setup.exe"
     if ($full) { $components = "" }
@@ -183,30 +187,48 @@ function Expand-NVDriver {
         $f[$index[$i]] = "`t`t$($x[$i]) """"/>"
     }
     Set-Content "$fp" -Value $f -Encoding UTF8
-    Set-Content "$ENV:TEMP\nvcpl.txt" "$output\Display.Driver\NVCPL" -Encoding UTF8
-    Start-Process "$output\setup.exe" -ErrorAction SilentlyContinue
+    if (-not($slient)) {Start-Process "$output\setup.exe" -ErrorAction SilentlyContinue}
 }
 
-function Install-NVCPL {
+function Install-NVCPL ([switch]$uwp){
     if (-Not(New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
         Write-Error "Please run this script as an Administrator!" -ForegroundColor Red
     }
-    Set-Service "NVDisplay.ContainerLocalSystem" -StartupType Disabled -ErrorAction SilentlyContinue
-    Stop-Service "NVDisplay.ContainerLocalSystem" -ErrorAction SilentlyContinue
-    $txt = "$ENV:TEMP\nvcpl.txt"
-    if (-Not(Test-Path "$txt")) {
-        Write-Error "Please download and extract a driver package using Invoke-NVDriver | Expand-NVDriver!" -ErrorAction Stop
-    }
-    $appx = ((Get-ChildItem (Get-Content "$txt" -Encoding UTF8) | Where-Object { $_ -like "*.appx" }).FullName)
-    $zip = "$(Split-Path $appx)\$((Get-Item $appx).BaseName).zip"  
+
+    $file = "$ENV:TEMP\NVCPL.zip"
     $dir = "$ENV:PROGRAMDATA\NVIDIA Corporation\NVCPL"
     $url = "$ENV:PROGRAMDATA\Microsoft\Windows\Start Menu\Programs\NVIDIA Control Panel.url"
-    foreach ($i in ($dir, $url)) {
-        Remove-Item "$i" -Recurse -Force -ErrorAction SilentlyContinue
+    if ($uwp) {$file = "$file.appx"}
+
+    # Using rg-adguard to fetch the latest NVIDIA Control Panel.
+    $body = @{
+        type = 'url'
+        url  = "https://apps.microsoft.com/store/detail/nvidia-control-panel/9NF8H0H7WMLT"
+        ring = 'RP'
+        lang = 'en-US' 
     }
-    Copy-Item "$appx" "$zip"
-    Expand-Archive "$zip" "$dir" -Force | Out-Null
-    Write-Output "Fetching NVIDIA Control Panel Launcher..."
+    Write-Output "Getting the latest version of the NVIDIA Control Panel from the Microsoft Store..."
+    $link = ((Invoke-RestMethod -Method Post -Uri "https://store.rg-adguard.net/api/GetFiles" -ContentType "application/x-www-form-urlencoded" -Body $body) -Split "`n" | 
+    ForEach-Object { $_.Trim() } |
+    Where-Object {$_ -like ("*http://tlu.dl.delivery.mp.microsoft.com*")} |
+    ForEach-Object {((($_ -split "<td>", 2, "SimpleMatch")[1] -Split "rel=", 2, "SimpleMatch")[0] -Split "<a href=", 2, "SimpleMatch")[1].Trim().Trim('"')})[-1]
+    curl.exe -#L "$link" -o "$file"
+    if ($uwp) {
+        Write-Output "Installing the NVIDIA Control Panel as a UWP app..."
+        Add-AppxPackage "$file" -ForceApplicationShutdown -ForceUpdateFromAnyVersion
+        Write-Output "NVIDIA Control Panel Installed!"
+        return
+    }
+
+    Write-Output "Installing the NVIDIA Control Panel as a Win32 app..."
+
+    # Disable the NVIDIA Root Container Service. The NVIDIA Control Panel Launcher runs the service when the NVIDIA Control Panel is launched.
+    Set-Service "NVDisplay.ContainerLocalSystem" -StartupType Disabled -ErrorAction SilentlyContinue
+    Stop-Service "NVDisplay.ContainerLocalSystem" -ErrorAction SilentlyContinue
+    Expand-Archive "$file" "$dir" -Force
+    foreach ($i in ($dir, $url)) {Remove-Item "$i" -Recurse -Force -ErrorAction SilentlyContinue}
+
+    # This launcher is needed inorder to suppress the annoying pop-up that the UWP Control Panel isn't installed.
     curl.exe -#L "$((Invoke-RestMethod "https://api.github.com/repos/Aetopia/NVIPS/releases/latest").assets.browser_download_url)" -o "$dir\nvcpl.exe"
     Set-Content "$url" "[InternetShortcut]`nURL=file:///$dir\nvcpl.exe`nIconIndex=0`nIconFile=$dir\nvcplui.exe" -Encoding UTF8
     Write-Output "NVIDIA Control Panel Installed!"
