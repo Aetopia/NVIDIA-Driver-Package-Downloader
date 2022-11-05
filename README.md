@@ -7,7 +7,7 @@ A simple powershell script to extract and download NVIDIA driver packages.
 1. Open PowerShell as an Admin.
 2. Copy and paste the following command:
     ```ps
-    irm "https://raw.githubusercontent.com/Aetopia/NVIPS/main/NVIPS.ps1" | iex
+    irm "https://raw.githubusercontent.com/Aetopia/NVIPS/main/NVDPD.ps1" | iex
     ```
 3. Once the command executes, you can any of the following commands.
     1. `Get-NVGPU -Studio -Standard` | Query NVIDIA GPU Info
