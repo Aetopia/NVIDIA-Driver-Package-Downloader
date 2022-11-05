@@ -3,62 +3,46 @@ if (-Not(New-Object Security.Principal.WindowsPrincipal([Security.Principal.Wind
 }
 $global:ProgressPreference = "SilentlyContinue"
 
-function Get-NVGPU {
-    param ([switch]$studio, [switch]$standard)
+function Get-NVGPU ([switch]$studio, [switch]$standard) {
 
-    $whql, $dtcid, $vers, $devs, $type, $gpu = 1, 1, @(), @(), $null, $null
-
-    if ($studio) {
-        $whql = 4
-    }
-    if ($standard) {
-        $dtcid = 0
-    }
+    $driver = [System.Collections.ArrayList]@("Game Ready", "DCH")
+    $whql, $dtcid = 1, 1
+    $vers, $devs = @(), [ordered]@{}
+    $type = "GeForce"
+    if ($studio) { $whql = 4; $driver[0] = "Studio" }
+    if ($standard) { $dtcid = 0; $driver[1] = "Standard" }
 
     # Detect NVIDIA Hardware.
     $pciids = (Invoke-RestMethod "https://raw.githubusercontent.com/pciutils/pciids/master/pci.ids").Split("`n")
     $gpus = (Invoke-RestMethod "https://www.nvidia.com/Download/API/lookupValueSearch.aspx?TypeID=3").LookupValueSearch.LookupValues.LookupValue
     
-    if ($null -eq $hwids) {
-        $hwids = Get-ChildItem "HKLM:\SYSTEM\CurrentControlSet\Enum\PCI" | ForEach-Object {
-            $hwid = (Split-Path -Leaf $_.Name)
-            if ($hwid.startswith("VEN_10DE")) {
-                (($hwid -Split "VEN_10DE&DEV_") -Split "&SUBSYS")[1].Trim().ToLower()
-            }
-        } 
-    }
+    $hwids = Get-ChildItem "HKLM:\SYSTEM\CurrentControlSet\Enum\PCI" | ForEach-Object {
+        $hwid = (Split-Path -Leaf $_.Name)
+        if ($hwid.startswith("VEN_10DE")) {
+            (($hwid -Split "VEN_10DE&DEV_") -Split "&SUBSYS")[1].Trim().ToLower()
+        }
+    } 
 
     foreach ($i in $pciids) {
-        if ($i.startswith("10de")) {
-            $nvidia = $true
-        }
-        elseif ($i.StartsWith("10df")) {
-            break
-        }
+        if ($i.startswith("10de")) { $nvidia = $true }
+        elseif ($i.StartsWith("10df")) { break }
         if ($nvidia) {
             if (($i[0] -eq "`t") -and ($i[1] -ne "`t")) {
                 $id, $name = ($i.Trim("`t").Split(" ", 2))
                 foreach ($hwid in $hwids) {
                     if ($hwid -eq $id) {
-                        $devs += $name.Trim().Split(" ", 2)[1].TrimStart("[").TrimEnd("]").Trim()
+                        $devs[$hwid] += $name.Trim().Split(" ", 2)[1].TrimStart("[").TrimEnd("]").Trim()
                     }
                 }
             }
         }
     }
     :master foreach ($i in $gpus) {
-        foreach ($dev in $devs) {
-            $name, $dev = $i.Name.ToLower().TrimStart("nvidia").Trim(), $dev.ToLower().Trim()
+        foreach ($hwid in $devs.Keys) {
+            $name, $dev = $i.Name.ToLower().TrimStart("nvidia").Trim(), $devs[$hwid].ToLower().Trim()
             if ($dev -like "$($name)*") {
-                if ($name.startswith("quadro")) {
-                    $type = "Quadro"
-                }
-                elseif ($name.startswith("rtx")) {
-                    $type = "Telsa"
-                }
-                else {
-                    $type = "GeForce"
-                }
+                if ($name.startswith("quadro")) { $type = "Quadro" }
+                elseif ($name.startswith("rtx")) { $type = "Telsa" }
                 $gpu = $i
                 break master
             }
@@ -70,55 +54,48 @@ function Get-NVGPU {
         $link = "https://www.nvidia.com/Download/processFind.aspx?psid=$($gpu.ParentID)&pfid=$($gpu.Value)&osid=57&lid=1&whql=$whql&ctk=0&dtcid=$dtcid"
         $f = (Invoke-RestMethod "$link").Split("`n") | ForEach-Object { $_.Trim() }
         
-        foreach ($i in $f) {
-            if (($i -like "<td class=""gridItem"">*.*</td>") -and ($i -notlike "<td class=""gridItem"">*`<img*")) {
-                $i = $i.Trim("<td class=""gridItem"">").Trim("</td>")
-                if ($i -like "*(*)*") {
-                    $i = $i.Split("(", 2)[1].Trim(")")
-                }
-                $vers += [string]$i.Trim()
+        foreach ($l in $f) {
+            if (($l -like "<td class=""gridItem"">*.*</td>") -and ($l -notlike "<td class=""gridItem"">*`<img*")) {
+                $l = $l.Trim("<td class=""gridItem"">").Trim("</td>")
+                if ($l -like "*(*)*") { $l = $i.Split("(", 2)[1].Trim(")") }
+                $vers += [string]$l.Trim()
             }
         }
     }
     return [ordered]@{
-        GPU      = $gpu.Name; 
-        Versions = $($vers | Sort-Object -Descending); 
-        Type     = $type; 
+        GPU      = $gpu.Name
+        Versions = $($vers | Sort-Object -Descending)
+        Driver  = $driver -join " "
+        Type     = $type
         Debug    = [ordered]@{
-            Devices = $devs; 
-            HWIDS   = ($hwids | ForEach-Object { $_.ToUpper() });
-            Link    = $link 
+            HWID = $hwid.ToUpper()
+            Link = $link 
         } 
     }
 }
 
 function Invoke-NVDriver {
     param(
+        [hashtable]$gpu,
         [string]$version, 
         [switch]$studio, 
         [switch]$standard, 
         [string]$directory = "$ENV:TEMP", 
-        [switch]$full
+        [switch]$full,
+        [switch]$slient
     )
 
     if ($null -eq $gpu) { $gpu = Get-NVGPU -studio:$studio -standard:$standard }
-    $channel, $nsd, $type, $dir = '', '', '-dch', $directory
+    $channel = $nsd = ''
+    $type, $dir = '-dch', $directory
     $plat = 'desktop'
-    
+    if ($version -eq "") {$version = $gpu.Versions[0]}
+    if ($studio) {$nsd = '-nsd'}
+    if ($standard) {$type = ''}
     if ((get-wmiobject Win32_SystemEnclosure).ChassisTypes -in @(8, 9, 10, 11, 12, 14, 18, 21)) {
         $plat = 'notebook'
     }
 
-    if ($version -eq "") {
-        $version = $gpu.Versions[0]
-    }
-
-    if ($studio) {
-        $nsd = '-nsd'
-    }
-    if ($standard) {
-        $type = ''
-    }
     switch ($gpu.Type) {    
         "Quadro" {
             $channel = 'Quadro_Certified/'
@@ -129,7 +106,7 @@ function Invoke-NVDriver {
         }
     }
 
-    $output, $success = "$dir\NVIDIA - $version.exe", $false
+    $output, $success = "$dir\NVIDIA - $($gpu.Driver) $version.exe", $false
 
     foreach ($winver in @("win10-win11", "win10")) {
         $link = "https://international.download.nvidia.com/Windows/$channel$version/$version-$plat-$winver-64bit-international$nsd$type-whql.exe"
@@ -144,7 +121,7 @@ function Invoke-NVDriver {
     if (!($success)) {
         Write-Error "Couldn't find driver version $version.".Trim() -ErrorAction Stop
     }
-    Expand-NVDriver -file "$output" -dir "$dir" -full:$full  
+    Expand-NVDriver -file "$output" -dir "$dir" -full:$full  -silent:$slient
 }
 
 function Expand-NVDriver {
@@ -152,8 +129,10 @@ function Expand-NVDriver {
         [string]$file, 
         [string]$directory = "$ENV:TEMP", 
         [switch]$full,
-        [switch]$silent)
-    $dir = "$directory"
+        [switch]$silent
+    )
+
+    $dir = $directory
     $components = "Display.Driver NVI2 EULA.txt ListDevices.txt setup.cfg setup.exe"
     if ($full) { $components = "" }
     $output = "$dir\$(((Split-Path -Leaf "$file") -split ".exe", 2, "simplematch").Trim())".Trim()
@@ -189,16 +168,19 @@ function Expand-NVDriver {
         $f[$index[$i]] = "`t`t$($x[$i]) """"/>"
     }
     Set-Content "$fp" -Value $f -Encoding UTF8
-    if (-not($slient)) {Start-Process "$output\setup.exe" -ErrorAction SilentlyContinue}
+    if ($slient -eq $false) { 
+        try {Start-Process "$output\setup.exe" -ErrorAction SilentlyContinue }
+        catch [System.InvalidOperationException] {}
+    }
 }
 
-function Install-NVCPL ([switch]$uwp){
+function Install-NVCPL ([switch]$uwp) {
     $file = "$ENV:TEMP\NVCPL.zip"
     $dir = "$ENV:PROGRAMDATA\NVIDIA Corporation\NVCPL"
     $lnk = "$ENV:PROGRAMDATA\Microsoft\Windows\Start Menu\Programs\NVIDIA Control Panel.lnk"
-    if ($uwp) {$file = "$file.appx"}
+    if ($uwp) { $file = "$file.appx" }
 
-    # Using rg-adguard to fetch the latest NVIDIA Control Panel.
+    # Using rg-adguard to fetch the latest version of the NVIDIA Control Panel.
     $body = @{
         type = 'url'
         url  = "https://apps.microsoft.com/store/detail/nvidia-control-panel/9NF8H0H7WMLT"
@@ -207,9 +189,9 @@ function Install-NVCPL ([switch]$uwp){
     }
     Write-Output "Getting the latest version of the NVIDIA Control Panel from the Microsoft Store..."
     $link = ((Invoke-RestMethod -Method Post -Uri "https://store.rg-adguard.net/api/GetFiles" -ContentType "application/x-www-form-urlencoded" -Body $body) -Split "`n" | 
-    ForEach-Object { $_.Trim() } |
-    Where-Object {$_ -like ("*http://tlu.dl.delivery.mp.microsoft.com*")} |
-    ForEach-Object {((($_ -split "<td>", 2, "SimpleMatch")[1] -Split "rel=", 2, "SimpleMatch")[0] -Split "<a href=", 2, "SimpleMatch")[1].Trim().Trim('"')})[-1]
+        ForEach-Object { $_.Trim() } |
+        Where-Object { $_ -like ("*http://tlu.dl.delivery.mp.microsoft.com*") } |
+        ForEach-Object { ((($_ -split "<td>", 2, "SimpleMatch")[1] -Split "rel=", 2, "SimpleMatch")[0] -Split "<a href=", 2, "SimpleMatch")[1].Trim().Trim('"') })[-1]
     curl.exe -#L "$link" -o "$file"
 
     if ($uwp) {
@@ -223,7 +205,7 @@ function Install-NVCPL ([switch]$uwp){
     # Disable the NVIDIA Root Container Service. The NVIDIA Control Panel Launcher runs the service when the NVIDIA Control Panel is launched.
     Set-Service "NVDisplay.ContainerLocalSystem" -StartupType Disabled -ErrorAction SilentlyContinue
     Stop-Service "NVDisplay.ContainerLocalSystem" -ErrorAction SilentlyContinue
-    foreach ($i in ($dir, $lnk)) {Remove-Item "$i" -Recurse -Force -ErrorAction SilentlyContinue}
+    foreach ($i in ($dir, $lnk)) { Remove-Item "$i" -Recurse -Force -ErrorAction SilentlyContinue }
     Expand-Archive "$file" "$dir" -Force
 
     # This launcher is needed inorder to suppress the annoying pop-up that the UWP Control Panel isn't installed.

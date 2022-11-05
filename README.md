@@ -17,16 +17,19 @@ A simple PowerShell script to extract and download NVIDIA driver packages.
     2. `Expand-NVDriver` |  Extract a NVIDIA driver package.
         1. `-File <file>` | NVIDIA driver package file to extract. 
         2. `-Directory <Directory>` | Output Directory (Default > `%TEMP%`)
+        3. `-Slient` | Using this option will not run `setup.exe`.
 
     3. `Invoke-NVDriver` | Download a driver package but extract the display driver only.
-        1. `-Version <Version>` | Set which version to download
-        2. `-Studio` | Studio driver type.
-        3. `-Standard` | Standard driver type.
-        4. `-Directory <Directory>` | Output Directory
-        5. `-Full` | Download an entire driver package. 
+        1. `-GPU <Get-NVGPU>` | Pass a variable which has contain a `Get-NVGPU` Object.
+        2. `-Version <Version>` | Set which version to download
+        3. `-Studio` | Studio driver type.
+        4. `-Standard` | Standard driver type.
+        5. `-Directory <Directory>` | Output Directory
+        6. `-Full` | Download an entire driver package. 
+        7. `-Slient` | Using this option will not run `setup.exe`.
     
     4. `Install-NVCPL` | Install the NVIDIA Control Panel.                
-        By default this function installs the NVIDIA Control Panel as a Win32 app.            
+        By default, this function installs the NVIDIA Control Panel as a Win32 app.            
         - `-UWP` | Install the NVIDIA Panel as a UWP app.
 
 # NVIDIA Control Panel Launcher
