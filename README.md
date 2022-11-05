@@ -1,6 +1,6 @@
 # NVIDIA Driver Package Downloader (NVDPD)
 
-A simple powershell script to extract and download NVIDIA driver packages.
+A simple PowerShell script to extract and download NVIDIA driver packages.
 
 # Usage
 
