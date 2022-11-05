@@ -25,7 +25,8 @@ A simple powershell script to extract and download NVIDIA driver packages.
         4. `-Directory <Directory>` | Output Directory
         5. `-Full` | Download an entire driver package. 
     
-    4. `Install-NVCPL` | Install the NVIDIA Control Panel. 
+    4. `Install-NVCPL` | Install the NVIDIA Control Panel.                
+        By default this function installs the NVIDIA Control Panel as a Win32 app.            
         - `-UWP` | Install the NVIDIA Panel as a UWP app.
 
 # NVIDIA Control Panel Launcher

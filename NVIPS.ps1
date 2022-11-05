@@ -159,8 +159,8 @@ function Expand-NVDriver {
     if ((Test-Path "$output")) {
         Remove-Item "$output" -Recurse -Force -ErrorAction SilentlyContinue
     }
-    $7zr = "$ENV:TEMP\7zr.exe"
 
+    $7zr = "$ENV:TEMP\7zr.exe"
     curl.exe -s "https://www.7-zip.org/a/7zr.exe" -o "$7zr"
     Invoke-Expression "& ""$7zr"" x -bso0 -bsp1 -bse1 -aoa ""$file"" $components -o""$output"""
 
@@ -225,8 +225,8 @@ function Install-NVCPL ([switch]$uwp){
     # Disable the NVIDIA Root Container Service. The NVIDIA Control Panel Launcher runs the service when the NVIDIA Control Panel is launched.
     Set-Service "NVDisplay.ContainerLocalSystem" -StartupType Disabled -ErrorAction SilentlyContinue
     Stop-Service "NVDisplay.ContainerLocalSystem" -ErrorAction SilentlyContinue
-    Expand-Archive "$file" "$dir" -Force
     foreach ($i in ($dir, $url)) {Remove-Item "$i" -Recurse -Force -ErrorAction SilentlyContinue}
+    Expand-Archive "$file" "$dir" -Force
 
     # This launcher is needed inorder to suppress the annoying pop-up that the UWP Control Panel isn't installed.
     curl.exe -#L "$((Invoke-RestMethod "https://api.github.com/repos/Aetopia/NVIPS/releases/latest").assets.browser_download_url)" -o "$dir\nvcpl.exe"
