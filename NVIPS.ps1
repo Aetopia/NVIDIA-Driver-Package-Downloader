@@ -1,3 +1,6 @@
+if (-Not(New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Error "Please run this script as an Administrator!" -ForegroundColor Red
+}
 $global:ProgressPreference = "SilentlyContinue"
 
 function Get-NVGPU {
@@ -142,8 +145,6 @@ function Invoke-NVDriver {
         Write-Error "Couldn't find driver version $version.".Trim() -ErrorAction Stop
     }
     Expand-NVDriver -file "$output" -dir "$dir" -full:$full  
-
-
 }
 function Expand-NVDriver {
     param(
@@ -191,13 +192,9 @@ function Expand-NVDriver {
 }
 
 function Install-NVCPL ([switch]$uwp){
-    if (-Not(New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-        Write-Error "Please run this script as an Administrator!" -ForegroundColor Red
-    }
-
     $file = "$ENV:TEMP\NVCPL.zip"
     $dir = "$ENV:PROGRAMDATA\NVIDIA Corporation\NVCPL"
-    $url = "$ENV:PROGRAMDATA\Microsoft\Windows\Start Menu\Programs\NVIDIA Control Panel.url"
+    $lnk = "$ENV:PROGRAMDATA\Microsoft\Windows\Start Menu\Programs\NVIDIA Control Panel.lnk"
     if ($uwp) {$file = "$file.appx"}
 
     # Using rg-adguard to fetch the latest NVIDIA Control Panel.
@@ -213,6 +210,7 @@ function Install-NVCPL ([switch]$uwp){
     Where-Object {$_ -like ("*http://tlu.dl.delivery.mp.microsoft.com*")} |
     ForEach-Object {((($_ -split "<td>", 2, "SimpleMatch")[1] -Split "rel=", 2, "SimpleMatch")[0] -Split "<a href=", 2, "SimpleMatch")[1].Trim().Trim('"')})[-1]
     curl.exe -#L "$link" -o "$file"
+
     if ($uwp) {
         Write-Output "Installing the NVIDIA Control Panel as a UWP app..."
         Add-AppxPackage "$file" -ForceApplicationShutdown -ForceUpdateFromAnyVersion
@@ -221,15 +219,18 @@ function Install-NVCPL ([switch]$uwp){
     }
 
     Write-Output "Installing the NVIDIA Control Panel as a Win32 app..."
-
     # Disable the NVIDIA Root Container Service. The NVIDIA Control Panel Launcher runs the service when the NVIDIA Control Panel is launched.
     Set-Service "NVDisplay.ContainerLocalSystem" -StartupType Disabled -ErrorAction SilentlyContinue
     Stop-Service "NVDisplay.ContainerLocalSystem" -ErrorAction SilentlyContinue
-    foreach ($i in ($dir, $url)) {Remove-Item "$i" -Recurse -Force -ErrorAction SilentlyContinue}
+    foreach ($i in ($dir, $lnk)) {Remove-Item "$i" -Recurse -Force -ErrorAction SilentlyContinue}
     Expand-Archive "$file" "$dir" -Force
 
     # This launcher is needed inorder to suppress the annoying pop-up that the UWP Control Panel isn't installed.
     curl.exe -#L "$((Invoke-RestMethod "https://api.github.com/repos/Aetopia/NVIPS/releases/latest").assets.browser_download_url)" -o "$dir\nvcpl.exe"
-    Set-Content "$url" "[InternetShortcut]`nURL=file:///$dir\nvcpl.exe`nIconIndex=0`nIconFile=$dir\nvcplui.exe" -Encoding UTF8
+    $wsshell = New-Object -ComObject "WScript.Shell"
+    $shortcut = $wsshell.CreateShortcut("$lnk")
+    $shortcut.TargetPath = "$dir\nvcpl.exe"
+    $shortcut.IconLocation = "$dir\nvcplui.exe, 0"
+    $shortcut.Save()
     Write-Output "NVIDIA Control Panel Installed!"
 }
