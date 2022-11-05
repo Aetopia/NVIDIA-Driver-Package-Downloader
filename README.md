@@ -1,4 +1,4 @@
-# NVIDIA Installer PowerShell (NVIPS)
+# NVIDIA Driver Package Downloader (NVDPD)
 
 A simple powershell script to extract and download NVIDIA driver packages.
 
