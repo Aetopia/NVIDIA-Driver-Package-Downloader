@@ -16,7 +16,7 @@ A simple powershell script to extract and download NVIDIA driver packages.
 
     2. `Expand-NVDriver` |  Extract a NVIDIA driver package.
         1. `-File <file>` | NVIDIA driver package file to extract. 
-        2. `-Directory <Directory>` | Output Directory (Default > `%TEMP%)
+        2. `-Directory <Directory>` | Output Directory (Default > `%TEMP%`)
 
     3. `Invoke-NVDriver` | Download a driver package but extract the display driver only.
         1. `-Version <Version>` | Set which version to download
