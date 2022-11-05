@@ -1,5 +1,5 @@
 if (-Not(New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Error "Please run this script as an Administrator!" -ForegroundColor Red
+    Write-Error "Please run this script as an Administrator!"
 }
 $global:ProgressPreference = "SilentlyContinue"
 
