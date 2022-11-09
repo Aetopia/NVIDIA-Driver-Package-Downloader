@@ -185,9 +185,8 @@ function Install-NVCPL ([switch]$uwp) {
     if ($null -eq (Get-CimInstance Win32_VideoController | Where-Object { $_.Name -like "NVIDIA*" })) { Write-Error "No NVIDIA GPU found." -ErrorAction Stop }
 
     # Disable Telemetry.
-    reg.exe add "HKLM\SOFTWARE\NVIDIA Corporation\NvControlPanel2\Client" /v "OptInOrOutPreference" /t REG_DWORD /d 0 /f 
-    reg.exe add "HKLM\SYSTEM\CurrentControlSet\Services\nvlddmkm\Global\Startup" /v "SendTelemetryData" /t REG_DWORD /d 0 /f
-
+    New-ItemProperty -Path "HKLM:\SOFTWARE\NVIDIA Corporation\NvControlPanel2\Client" -Name "OptInOrOutPreference" -Value 0 -PropertyType DWORD -Force -ErrorAction SilentlyContinue | Out-Null
+    New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\nvlddmkm\Global\Startup" -Name "SendTelemetryData" -Value 0 -PropertyType DWORD -Force -ErrorAction SilentlyContinue | Out-Null
     # Using rg-adguard to fetch the latest version of the NVIDIA Control Panel.
     $body = @{
         type = 'url'
@@ -203,7 +202,7 @@ function Install-NVCPL ([switch]$uwp) {
     curl.exe -#L "$link" -o "$file"
 
     if ($uwp) {
-        Write-Output "Installing the NVIDIA Control Panel as a UWP app..."
+        Write-Output "Installing the NVIDIA Control Panel as an UWP app..."
         Add-AppxPackage "$file" -ForceApplicationShutdown -ForceUpdateFromAnyVersion
         Write-Output "NVIDIA Control Panel Installed!"
         return
@@ -211,6 +210,7 @@ function Install-NVCPL ([switch]$uwp) {
 
     Write-Output "Installing the NVIDIA Control Panel as a Win32 app..."
     # Disable the NVIDIA Root Container Service. The NVIDIA Control Panel Launcher runs the service when the NVIDIA Control Panel is launched.
+    Stop-Process -Name "NVDisplay.Container" -Force -ErrorAction SilentlyContinue
     Set-Service "NVDisplay.ContainerLocalSystem" -StartupType Disabled -ErrorAction SilentlyContinue
     Stop-Service "NVDisplay.ContainerLocalSystem" -Force -ErrorAction SilentlyContinue
     foreach ($i in ($dir, $lnk)) { Remove-Item "$i" -Recurse -Force -ErrorAction SilentlyContinue }
