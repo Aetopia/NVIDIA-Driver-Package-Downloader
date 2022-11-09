@@ -47,7 +47,7 @@ This program serves the launcher for the NVIDIA Control Panel, although you don'
    ```
    >Optional: Compress using UPX.
    >```
-   >upx -8 nvcpl.exe
+   >upx -9 nvcpl.exe
    >```
 3. Now simply extract the NVIDIA Control Panel APPX package as a `.zip` archive.              
    Can be found in `Display.Driver\NVCPL` within an extracted driver package.
