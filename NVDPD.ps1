@@ -217,7 +217,7 @@ function Install-NVCPL ([switch]$uwp) {
     Expand-Archive "$file" "$dir" -Force
 
     # This launcher is needed inorder to suppress the annoying pop-up that the UWP Control Panel isn't installed.
-    curl.exe -#L "$((Invoke-RestMethod "https://api.github.com/repos/Aetopia/NVIPS/releases/latest").assets.browser_download_url)" -o "$dir\nvcpl.exe"
+    curl.exe -#L "$((Invoke-RestMethod "https://api.github.com/repos/Aetopia/NVIDIA-Driver-Package-Downloader/releases/latest").assets.browser_download_url)" -o "$dir\nvcpl.exe"
     $wsshell = New-Object -ComObject "WScript.Shell"
     $shortcut = $wsshell.CreateShortcut("$lnk")
     $shortcut.TargetPath = "$dir\nvcpl.exe"
