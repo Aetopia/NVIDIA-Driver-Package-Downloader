@@ -1,7 +1,10 @@
+$global:ProgressPreference = "SilentlyContinue"
 if (-Not(New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Write-Error "Please run this script as an Administrator!"
 }
-$global:ProgressPreference = "SilentlyContinue"
+if ($null -eq (Get-ChildItem "HKLM:\SYSTEM\CurrentControlSet\Enum\PCI" | Where-Object { $_.Name -like "*10DE*" })) { 
+    Write-Error "No NVIDIA GPU found!"
+}
 
 function Get-NVGPU ([switch]$studio, [switch]$standard) {
 
@@ -65,7 +68,7 @@ function Get-NVGPU ([switch]$studio, [switch]$standard) {
     return [ordered]@{
         GPU      = $gpu.Name
         Versions = $($vers | Sort-Object -Descending)
-        Driver  = $driver -join " "
+        Driver   = $driver -join " "
         Type     = $type
         Debug    = [ordered]@{
             HWID = $hwid.ToUpper()
@@ -89,9 +92,9 @@ function Invoke-NVDriver {
     $channel = $nsd = ''
     $type, $dir = '-dch', $directory
     $plat = 'desktop'
-    if ($version -eq "") {$version = $gpu.Versions[0]}
-    if ($studio) {$nsd = '-nsd'}
-    if ($standard) {$type = ''}
+    if ($version -eq "") { $version = $gpu.Versions[0] }
+    if ($studio) { $nsd = '-nsd' }
+    if ($standard) { $type = '' }
     if ((get-wmiobject Win32_SystemEnclosure).ChassisTypes -in @(8, 9, 10, 11, 12, 14, 18, 21)) {
         $plat = 'notebook'
     }
@@ -169,7 +172,7 @@ function Expand-NVDriver {
     }
     Set-Content "$fp" -Value $f -Encoding UTF8
     if ($slient -eq $false) { 
-        try {Start-Process "$output\setup.exe" -ErrorAction SilentlyContinue }
+        try { Start-Process "$output\setup.exe" -ErrorAction SilentlyContinue }
         catch [System.InvalidOperationException] {}
     }
 }
@@ -179,6 +182,11 @@ function Install-NVCPL ([switch]$uwp) {
     $dir = "$ENV:PROGRAMDATA\NVIDIA Corporation\NVCPL"
     $lnk = "$ENV:PROGRAMDATA\Microsoft\Windows\Start Menu\Programs\NVIDIA Control Panel.lnk"
     if ($uwp) { $file = "$file.appx" }
+    if ($null -eq (Get-CimInstance Win32_VideoController | Where-Object { $_.Name -like "NVIDIA*" })) { Write-Error "No NVIDIA GPU found." -ErrorAction Stop }
+
+    # Disable Telemetry.
+    reg.exe add "HKLM\SOFTWARE\NVIDIA Corporation\NvControlPanel2\Client" /v "OptInOrOutPreference" /t REG_DWORD /d 0 /f 
+    reg.exe add "HKLM\SYSTEM\CurrentControlSet\Services\nvlddmkm\Global\Startup" /v "SendTelemetryData" /t REG_DWORD /d 0 /f
 
     # Using rg-adguard to fetch the latest version of the NVIDIA Control Panel.
     $body = @{
@@ -204,7 +212,7 @@ function Install-NVCPL ([switch]$uwp) {
     Write-Output "Installing the NVIDIA Control Panel as a Win32 app..."
     # Disable the NVIDIA Root Container Service. The NVIDIA Control Panel Launcher runs the service when the NVIDIA Control Panel is launched.
     Set-Service "NVDisplay.ContainerLocalSystem" -StartupType Disabled -ErrorAction SilentlyContinue
-    Stop-Service "NVDisplay.ContainerLocalSystem" -ErrorAction SilentlyContinue
+    Stop-Service "NVDisplay.ContainerLocalSystem" -Force -ErrorAction SilentlyContinue
     foreach ($i in ($dir, $lnk)) { Remove-Item "$i" -Recurse -Force -ErrorAction SilentlyContinue }
     Expand-Archive "$file" "$dir" -Force
 
@@ -217,3 +225,27 @@ function Install-NVCPL ([switch]$uwp) {
     $shortcut.Save()
     Write-Output "NVIDIA Control Panel Installed!"
 }
+
+function Get-NVGPUProperty {
+    # MSI Mode
+    $pci = "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Enum\PCI"
+    $gpu = "$(Split-Path $pci)\$(((Get-CimInstance Win32_VideoController | Where-Object { $_.Name -like "NVIDIA*" }).PNPDeviceID -Split "&SUBSYS", 2, "SimpleMatch")[0])"
+
+    $hwid = (Get-ChildItem "Registry::$(Get-ChildItem "Registry::$pci" | Where-Object {$_.Name -like "$gpu*"})").Name
+    $msimode = Get-ItemPropertyValue "Registry::$hwid\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties" -Name "MSISupported"
+    
+    $dev = (Get-ChildItem "HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}" -ErrorAction SilentlyContinue).Name | 
+    Where-Object { $_ -like "*000*" } |
+    ForEach-Object { Get-ItemProperty "Registry::$_" } | 
+    Where-Object { $_.ProviderName -like "*NVIDIA*" } 
+    
+            
+    return [ordered]@{
+        "MSI Mode"        = if ($msimode) { $true } else { $false }
+        "Dynamic P State" = if ($dev.DisableDynamicPstate) { $false } else { $true }
+        "HDCP"            = if ($dev.RMHdcpKeyglobZero) { $false } else { $true }
+        "Info"            = @{"HWID" = $hwid; "Device" = Convert-Path $dev.PSPath }
+    }
+}
+
+function Set-NVGPUProperty ([string]$Name, [switch]$switch) {}
