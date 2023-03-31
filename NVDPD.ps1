@@ -49,7 +49,7 @@ function Get-NvidiaGpu {
         }
         break
     } 
-    
+    Write-Error "No NVIDIA GPU found." -ErrorAction Stop
 }
 
 function Get-NvidiaDriverVersions (
