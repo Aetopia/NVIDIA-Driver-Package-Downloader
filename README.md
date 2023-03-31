@@ -10,16 +10,16 @@ A simple PowerShell script to extract and download NVIDIA driver packages.
     irm "https://raw.githubusercontent.com/Aetopia/NVIPS/main/NVDPD.ps1" | iex
     ```
 3. Once the command executes, you can any of the following commands.
-    1. `Get-NvidiaGpu`: **Query NVIDIA GPU Info.**
+    - `Get-NvidiaGpu`: **Query NVIDIA GPU Info.**
 
-    2. `Expand-NvidiaDriverPackage`: **Extract a NVIDIA driver package.**
+    - `Expand-NvidiaDriverPackage`: **Extract a NVIDIA driver package.**
         |Argument|Description|
         |-|-| 
         |`-DriverPackage <DriverPackage>` | NVIDIA driver package file to extract.|
         | `-Setup` | Launch the NVIDIA Driver Setup|
         | `-Components <Components>`| Extract Driver Specific Components.|
 
-    3. `Invoke-NvidiaDriverPackage`: **Download a driver package**
+    - `Invoke-NvidiaDriverPackage`: **Download a driver package**
         |Argument|Description|
         |-|-| 
         |`-NvidiaGpu <Get-NvidaGpu>` | Pass a variable which has a `Get-NvidaGpu` Object.|
