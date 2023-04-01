@@ -117,13 +117,11 @@ Downloading: `"$(Split-Path $Output -Leaf)`""
                     (New-Object System.Net.WebClient).DownloadFile($DownloadLink, $Output)
                 }
                 Write-Output "Finished: Driver Package Downloaded."
-                Expand-NvidiaDriverPackage $Output $Setup $Components
-                break
+                Expand-NvidiaDriverPackage $Output -Setup: $Setup $Components
             }
         }
         catch [System.Net.WebException] {}
     }
-    Write-Error "Failed to download driver package."
 }
 
 function Expand-NvidiaDriverPackage (
@@ -166,7 +164,6 @@ Extraction Directory: `"$Output`""
 
     Write-Output "Finished: Driver Package has been Extracted."
     if ($Setup) {
-        Write-Output "Launch: Starting NVIDIA Driver Setup."
         Start-Process "$Output\setup.exe" -ErrorAction SilentlyContinue
     }
 }
