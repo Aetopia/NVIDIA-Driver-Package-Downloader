@@ -43,7 +43,7 @@ function Get-NvidiaGpu {
             return [ordered]@{
                 "Gpu"  = $Gpu.Name;
                 "Psid" = $Gpu.ParentID;
-                "Pfid" = $Gpu.Value
+                "Pfid" = $Gpu.Value;
             }
         }
         break
@@ -165,5 +165,33 @@ Extraction Directory: `"$Output`""
     Write-Output "Finished: Driver Package has been Extracted."
     if ($Setup) {
         Start-Process "$Output\setup.exe" -ErrorAction SilentlyContinue
+    }
+}
+
+function Get-NvidiaGpuProperties {
+    $NvidiaGpuProperties = Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\????" -ErrorAction SilentlyContinue | 
+    Where-Object { $_.MatchingDeviceId.StartsWith("pci\ven_10de") }
+
+    return [ordered]@{
+        "Key"                                   = $NvidiaGpuProperties.PSPath.TrimStart("Microsoft.PowerShell.Core\Registry::")
+        "Dynamic P-State"                       = !$NvidiaGpuProperties.DisableDynamicPstate
+        "HDCP"                                  = !$NvidiaGpuProperties.RMHdcpKeyglobZero
+        "NVIDIA Control Panel Telemetry"        = [bool](Get-ItemProperty "HKLM:\SOFTWARE\NVIDIA Corporation\NvControlPanel2\Client" -ErrorAction SilentlyContinue).OptInOrOutPreference
+        "NVIDIA Service Telemetry" = [bool](Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\nvlddmkm\Global\Startup" -ErrorAction SilentlyContinue).SendTelemetryData
+    };
+}
+
+function Set-NvidiaGpuProperty (
+    [Parameter(Mandatory = $True)][string]$Property,
+    [Parameter(Mandatory = $True)][bool]$State) {
+    $Key = (Get-NvidiaGpuProperties).Key 
+    $Value =  (![int]$State)
+
+    switch ($Property.Trim()) {
+        "DynamicPState" {New-ItemProperty "Registry::$Key" "DisableDynamicPstate" -Value $Value -PropertyType DWORD -Force} 
+        "HDCP" {New-ItemProperty "Registry::$Key" "RMHdcpKeyglobZero" -Value $Value -PropertyType DWORD -Force} 
+        "NVCPLTelemetry" {New-ItemProperty "HKLM:\SOFTWARE\NVIDIA Corporation\NvControlPanel2\Client" "OptInOrOutPreference" -Value (!$Value) -PropertyType DWORD -Force} 
+        "NVSTelemetry" {New-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\nvlddmkm\Global\Startup" "SendTelemetryData" -Value (!$Value) -PropertyType DWORD -Force}
+        default {Write-Error "Invalid Property."}
     }
 }

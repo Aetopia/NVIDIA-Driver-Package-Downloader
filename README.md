@@ -28,3 +28,18 @@ A simple PowerShell script to extract and download NVIDIA driver packages.
         | `-Standard` | Standard driver type.|
         | `-Setup` | Launch the NVIDIA Driver Setup.|
         | `-Components <Components>` | Extract Driver Specific Components. |
+    
+    - `Get-NvidiaGpuProperties` | Get information on Dynamic P-State, HDCP and NVIDIA Control Panel & NVIDIA Display Container LS Service Telemetry.
+
+    - `Set-NvidiaGpuProperty` | Configure a Nvidia GPU property.
+        |Argument|Description|
+        |-|-|
+        |`-Property`| Specify the property to configure.|
+        |`-State`| Configure the state of the specified property, `1` for enabling the property and `0` for disabling it.|
+
+        |Property|Description|
+        |-|-|
+        |`DynamicPState`| This property determines if a NVIDIA GPU should dynamically clock itself.|
+        |`HDCP`|This property determines if HDCP is enabled for DRM content.| 
+        |`NVCPLTelemetry`|This property determines if NVIDIA Control Panel has telemetry enabled or not.
+        |`NVSTelemetry`|This property determines if the NVIDIA Display Container LS Service has telemetry enabled or not.|
