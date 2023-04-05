@@ -31,7 +31,7 @@ A simple PowerShell script to extract and download NVIDIA driver packages.
     
     - `Get-NvidiaGpuProperties` | Get information on Dynamic P-State, HDCP and NVIDIA Control Panel & NVIDIA Display Container LS Service Telemetry.
 
-    - `Set-NvidiaGpuProperty` | Configure a Nvidia GPU property.
+    - `Set-NvidiaGpuProperty` | Configure a NVIDIA GPU property.
         |Argument|Description|
         |-|-|
         |`-Property`| Specify the property to configure.|
