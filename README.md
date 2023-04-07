@@ -12,7 +12,7 @@ A simple PowerShell script to extract and download NVIDIA driver packages.
 3. Once the command executes, you can any of the following commands.
     - `Get-NvidiaGpu`: **Query NVIDIA GPU Info.**
 
-    - `Expand-NvidiaDriverPackage`: **Extract a NVIDIA driver package.**
+    - `Expand-NvidiaDriverPackage`: **Extract a NVIDIA driver package.**     
         Supported Components: `HDAudio, PhysX`                   
         |Argument|Description|
         |-|-| 
