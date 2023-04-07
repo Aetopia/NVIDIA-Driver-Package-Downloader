@@ -76,7 +76,8 @@ function Invoke-NvidiaDriverPackage (
     [switch]$Studio, 
     [switch]$Standard,
     [switch]$Setup,
-    [string]$Components = "Display.Driver NVI2 EULA.txt ListDevices.txt setup.cfg setup.exe") {
+    [switch]$All,
+    [array]$Components = @()) {
     $DriverName = [System.Collections.ArrayList]@("Game Ready", "DCH")
     $Channel, $NSD = "", ""
     $Platform = "desktop"
@@ -117,7 +118,7 @@ Downloading: `"$(Split-Path $Output -Leaf)`""
                     (New-Object System.Net.WebClient).DownloadFile($DownloadLink, $Output)
                 }
                 Write-Output "Finished: Driver Package Downloaded."
-                Expand-NvidiaDriverPackage $Output -Setup: $Setup $Components
+                Expand-NvidiaDriverPackage $Output -All: All -Setup: $Setup $Components
             }
         }
         catch [System.Net.WebException] {}
@@ -127,19 +128,32 @@ Downloading: `"$(Split-Path $Output -Leaf)`""
 function Expand-NvidiaDriverPackage (
     [Parameter(Mandatory = $True)]$DriverPackage,
     [switch]$Setup,
-    [string]$Components = "Display.Driver NVI2 EULA.txt ListDevices.txt setup.cfg setup.exe") {
+    [switch]$All,
+    [array]$Components = @()) {
+    $ComponentsFolders = "Display.Driver NVI2 EULA.txt ListDevices.txt setup.cfg setup.exe"
     $DriverPackage = (Resolve-Path $DriverPackage)
-    $Components = $Components.Trim()
     $Output = (Split-String $DriverPackage (Get-Item $DriverPackage).Extension 2)[0]
     $7Zip = "$ENV:TEMP\7zr.exe"
     $SetupCfg = "$Output\setup.cfg"
     $PresentationsCfg = "$Output/NVI2/presentations.cfg"
+    $Components | ForEach-Object {
+        switch ($_) {
+            "PhysX" { $ComponentsFolders += " $_" }
+            "HDAudio" { $ComponentsFolders += " $_" }
+            default { Write-Error "Invalid Component." -ErrorAction Stop } 
+        }
+    }
 
-    Write-Output "Extracting: `"$DriverPackage`"
-Extraction Directory: `"$Output`""
+    Write-Output "Extracting: `"$DriverPackage`""
+    if ($All) {
+        Write-Output "Components: All" 
+        $ComponentsFolders = "" 
+    }
+    else { Write-Output "Components: $($Components -Join " | ")" }
+    Write-Output "Extraction Directory: `"$Output`""
     Remove-Item $Output -Recurse -Force -ErrorAction SilentlyContinue
     (New-Object System.Net.WebClient).DownloadFile("https://www.7-zip.org/a/7zr.exe", $7Zip)
-    Invoke-Expression "& `"$7Zip`" x -bso0 -bsp1 -bse1 -aoa `"$DriverPackage`" $Components -o`"$Output`"" 
+    Invoke-Expression "& `"$7Zip`" x -bso0 -bsp1 -bse1 -aoa `"$DriverPackage`" $ComponentsFolders -o`"$Output`"" 
 
     $SetupCfgContent = [System.Collections.ArrayList](Get-Content $SetupCfg -Encoding Ascii)
     foreach ($Index in 0..($SetupCfgContent.Count - 1)) {
@@ -173,25 +187,27 @@ function Get-NvidiaGpuProperties {
     Where-Object { $_.MatchingDeviceId.StartsWith("pci\ven_10de") }
 
     return [ordered]@{
-        "Key"                                   = $NvidiaGpuProperties.PSPath.TrimStart("Microsoft.PowerShell.Core\Registry::")
-        "Dynamic P-State"                       = !$NvidiaGpuProperties.DisableDynamicPstate
-        "HDCP"                                  = !$NvidiaGpuProperties.RMHdcpKeyglobZero
-        "NVIDIA Control Panel Telemetry"        = [bool](Get-ItemProperty "HKLM:\SOFTWARE\NVIDIA Corporation\NvControlPanel2\Client" -ErrorAction SilentlyContinue).OptInOrOutPreference
-        "NVIDIA Service Telemetry" = [bool](Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\nvlddmkm\Global\Startup" -ErrorAction SilentlyContinue).SendTelemetryData
+        "Key"                            = $NvidiaGpuProperties.PSPath.TrimStart("Microsoft.PowerShell.Core\Registry::")
+        "Dynamic P-State"                = !$NvidiaGpuProperties.DisableDynamicPstate
+        "HDCP"                           = !$NvidiaGpuProperties.RMHdcpKeyglobZero
+        "NVIDIA Control Panel Telemetry" = [bool](Get-ItemProperty "HKLM:\SOFTWARE\NVIDIA Corporation\NvControlPanel2\Client" -ErrorAction SilentlyContinue).OptInOrOutPreference
+        "NVIDIA Service Telemetry"       = [bool](Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\nvlddmkm\Global\Startup" -ErrorAction SilentlyContinue).SendTelemetryData
     };
 }
 
 function Set-NvidiaGpuProperty (
-    [Parameter(Mandatory = $True)][string]$Property,
+    [Parameter(Mandatory = $True)]
+    [ValidateSet("DynamicPState", "HDCP", "NVCPLTelemetry", "NVSTelemetry")]
+    [string]$Property,
     [Parameter(Mandatory = $True)][bool]$State) {
     $Key = (Get-NvidiaGpuProperties).Key 
-    $Value =  (![int]$State)
-
-    switch ($Property.Trim()) {
-        "DynamicPState" {New-ItemProperty "Registry::$Key" "DisableDynamicPstate" -Value $Value -PropertyType DWORD -Force} 
-        "HDCP" {New-ItemProperty "Registry::$Key" "RMHdcpKeyglobZero" -Value $Value -PropertyType DWORD -Force} 
-        "NVCPLTelemetry" {New-ItemProperty "HKLM:\SOFTWARE\NVIDIA Corporation\NvControlPanel2\Client" "OptInOrOutPreference" -Value (!$Value) -PropertyType DWORD -Force} 
-        "NVSTelemetry" {New-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\nvlddmkm\Global\Startup" "SendTelemetryData" -Value (!$Value) -PropertyType DWORD -Force}
-        default {Write-Error "Invalid Property."}
-    }
+    $Value = (![int]$State)
+    if ($Key) {
+        switch ($Property.Trim()) {
+            "DynamicPState" { New-ItemProperty "Registry::$Key" "DisableDynamicPstate" -Value $Value -PropertyType DWORD -Force } 
+            "HDCP" { New-ItemProperty "Registry::$Key" "RMHdcpKeyglobZero" -Value $Value -PropertyType DWORD -Force } 
+            "NVCPLTelemetry" { New-ItemProperty "HKLM:\SOFTWARE\NVIDIA Corporation\NvControlPanel2\Client" "OptInOrOutPreference" -Value (!$Value) -PropertyType DWORD -Force } 
+            "NVSTelemetry" { New-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\nvlddmkm\Global\Startup" "SendTelemetryData" -Value (!$Value) -PropertyType DWORD -Force }
+        }
+    };
 }
