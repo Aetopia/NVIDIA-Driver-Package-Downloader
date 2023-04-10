@@ -111,7 +111,7 @@ function Invoke-NvidiaDriverPackage (
 Driver Type: $($DriverName -Join " ")
 Downloading: `"$(Split-Path $Output -Leaf)`""
                 if (Get-Command "curl.exe" -ErrorAction SilentlyContinue) { 
-                    #curl.exe -#L "$DownloadLink" -o "$Output" 
+                    curl.exe -#L "$DownloadLink" -o `"$Output`"
                 }
                 else {
                     Write-Output "Warning: Curl isn't available. Using PowerShell to download driver package."
