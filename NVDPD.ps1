@@ -206,7 +206,9 @@ function Set-NvidiaGpuProperty (
         switch ($Property.Trim()) {
             "DynamicPState" { New-ItemProperty "Registry::$Key" "DisableDynamicPstate" -Value $Value -PropertyType DWORD -Force } 
             "HDCP" { New-ItemProperty "Registry::$Key" "RMHdcpKeyglobZero" -Value $Value -PropertyType DWORD -Force } 
-            "NVCPLTelemetry" { New-ItemProperty "HKLM:\SOFTWARE\NVIDIA Corporation\NvControlPanel2\Client" "OptInOrOutPreference" -Value (!$Value) -PropertyType DWORD -Force } 
+            "NVCPLTelemetry" { 
+                New-Item "HKLM:\SOFTWARE\NVIDIA Corporation\NvControlPanel2\Client" -ErrorAction SilentlyContinue
+                New-ItemProperty "HKLM:\SOFTWARE\NVIDIA Corporation\NvControlPanel2\Client" "OptInOrOutPreference" -Value (!$Value) -PropertyType DWORD -Force } 
             "NVSTelemetry" { New-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\nvlddmkm\Global\Startup" "SendTelemetryData" -Value (!$Value) -PropertyType DWORD -Force }
         }
     };
