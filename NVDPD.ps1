@@ -143,6 +143,7 @@ function Expand-NvidiaDriverPackage (
                 "HDAudio" { $ComponentsFolders += " $_" }
                 default { Write-Error "Invalid Component." -ErrorAction Stop } 
             }
+            Write-Output: "Component: $_"
         }
     }
 
@@ -150,9 +151,6 @@ function Expand-NvidiaDriverPackage (
     if ($All) {
         Write-Output "Components: All" 
         $ComponentsFolders = "" 
-    }
-    elseif ($Components -and $All) { 
-        Write-Output "Components: $($Components -Join " | ")" 
     }
     Write-Output "Extraction Directory: `"$Output`""
     Remove-Item $Output -Recurse -Force -ErrorAction SilentlyContinue
