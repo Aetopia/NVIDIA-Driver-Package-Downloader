@@ -151,7 +151,9 @@ function Expand-NvidiaDriverPackage (
         Write-Output "Components: All" 
         $ComponentsFolders = "" 
     }
-    else { Write-Output "Components: $($Components -Join " | ")" }
+    elseif ($Components -and $All) { 
+        Write-Output "Components: $($Components -Join " | ")" 
+    }
     Write-Output "Extraction Directory: `"$Output`""
     Remove-Item $Output -Recurse -Force -ErrorAction SilentlyContinue
     (New-Object System.Net.WebClient).DownloadFile("https://www.7-zip.org/a/7zr.exe", $7Zip)
