@@ -136,11 +136,13 @@ function Expand-NvidiaDriverPackage (
     $7Zip = "$ENV:TEMP\7zr.exe"
     $SetupCfg = "$Output\setup.cfg"
     $PresentationsCfg = "$Output/NVI2/presentations.cfg"
-    $Components | ForEach-Object {
-        switch ($_) {
-            "PhysX" { $ComponentsFolders += " $_" }
-            "HDAudio" { $ComponentsFolders += " $_" }
-            default { Write-Error "Invalid Component." -ErrorAction Stop } 
+    if ($Components) {
+        $Components | ForEach-Object {
+            switch ($_) {
+                "PhysX" { $ComponentsFolders += " $_" }
+                "HDAudio" { $ComponentsFolders += " $_" }
+                default { Write-Error "Invalid Component." -ErrorAction Stop } 
+            }
         }
     }
 
@@ -207,7 +209,7 @@ function Set-NvidiaGpuProperty (
             "DynamicPState" { New-ItemProperty "Registry::$Key" "DisableDynamicPstate" -Value $Value -PropertyType DWORD -Force } 
             "HDCP" { New-ItemProperty "Registry::$Key" "RMHdcpKeyglobZero" -Value $Value -PropertyType DWORD -Force } 
             "NVCPLTelemetry" { 
-                New-Item "HKLM:\SOFTWARE\NVIDIA Corporation\NvControlPanel2\Client" -ErrorAction SilentlyContinue -Force
+                New-Item "HKLM:\SOFTWARE\NVIDIA Corporation\NvControlPanel2\Client" -ErrorAction SilentlyContinue -Force | Out-Null
                 New-ItemProperty "HKLM:\SOFTWARE\NVIDIA Corporation\NvControlPanel2\Client" "OptInOrOutPreference" -Value (!$Value) -PropertyType DWORD -Force | Out-Null
             } 
             "NVSTelemetry" { New-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\nvlddmkm\Global\Startup" "SendTelemetryData" -Value (!$Value) -PropertyType DWORD -Force | Out-Null }
