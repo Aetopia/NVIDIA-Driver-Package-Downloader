@@ -141,7 +141,7 @@ function Expand-NvidiaDriverPackage (
         $ComponentsFolders = "" 
     }
     elseif ($Components -and !$Full) {
-        Write-Output: "Components Selected: $($Components -Join " | ")"
+        Write-Output: "Extraction Options: Display Driver | $($Components -Join " | ")"
         $Components | ForEach-Object {
             switch ($_) {
                 "PhysX" { $ComponentsFolders += " $_" }
