@@ -118,7 +118,7 @@ Downloading: `"$(Split-Path $Output -Leaf)`""
                     (New-Object System.Net.WebClient).DownloadFile($DownloadLink, $Output)
                 }
                 Write-Output "Finished: Driver Package Downloaded."
-                Expand-NvidiaDriverPackage $Output -All: $Full -Setup: $Setup $Components
+                Expand-NvidiaDriverPackage $Output -Full: $Full -Setup: $Setup $Components
             }
         }
         catch [System.Net.WebException] {}
