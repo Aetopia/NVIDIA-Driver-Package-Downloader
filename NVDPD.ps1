@@ -72,7 +72,7 @@ function Get-NvidiaDriverVersions (
 
 function Invoke-NvidiaDriverPackage (
     [hashtable]$NvidiaGpu = (Get-NvidiaGpu),
-    [string]$Version = (Get-NvidiaDriverVersions $NvidiaGpu $Studio $Standard)[0],
+    [string]$Version = (Get-NvidiaDriverVersions $NvidiaGpu -Studio: $Studio -Standard: $Standard)[0],
     [switch]$Studio, 
     [switch]$Standard,
     [switch]$Setup,
