@@ -32,9 +32,16 @@ A simple PowerShell script to extract and download NVIDIA driver packages.
         | `-Full`|Extract a Full Driver Package|
         | `-Components <Component-1,Component-2, ...>` | Extract Driver Specific Components. |
     
-    - `Get-NvidiaGpuProperties` | Get information on Dynamic P-State, HDCP and NVIDIA Control Panel & NVIDIA Display Container LS Service Telemetry.
+    - `Get-NvidiaDriverVersions`: **Get NVIDIA Driver Versions.**    
+        |Argument|Description|
+        |-|-| 
+        |`-NvidiaGpu <Get-NvidiaGpu>` | Pass a variable which has a `Get-NvidaGpu` Object.|
+        | `-Studio` | Studio driver type.|
+        | `-Standard` | Standard driver type.|
 
-    - `Set-NvidiaGpuProperty` | Configure a NVIDIA GPU property.
+    - `Get-NvidiaGpuProperties` **Get information on Dynamic P-State, HDCP and NVIDIA Control Panel & NVIDIA Display Container LS Service Telemetry.**
+
+    - `Set-NvidiaGpuProperty`: **Configure a NVIDIA GPU property.**
         |Argument|Description|
         |-|-|
         |`-Property`| Specify the property to configure.|
