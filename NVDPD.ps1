@@ -76,7 +76,7 @@ function Invoke-NvidiaDriverPackage (
     [switch]$Studio, 
     [switch]$Standard,
     [switch]$Setup,
-    [switch]$All,
+    [switch]$Full,
     [array]$Components = @()) {
     $DriverName = [System.Collections.ArrayList]@("Game Ready", "DCH")
     $Channel, $NSD = "", ""
@@ -118,7 +118,7 @@ Downloading: `"$(Split-Path $Output -Leaf)`""
                     (New-Object System.Net.WebClient).DownloadFile($DownloadLink, $Output)
                 }
                 Write-Output "Finished: Driver Package Downloaded."
-                Expand-NvidiaDriverPackage $Output -All: $All -Setup: $Setup $Components
+                Expand-NvidiaDriverPackage $Output -All: $Full -Setup: $Setup $Components
             }
         }
         catch [System.Net.WebException] {}
@@ -128,7 +128,7 @@ Downloading: `"$(Split-Path $Output -Leaf)`""
 function Expand-NvidiaDriverPackage (
     [Parameter(Mandatory = $True)]$DriverPackage,
     [switch]$Setup,
-    [switch]$All,
+    [switch]$Full,
     [array]$Components = @()) {
     $ComponentsFolders = "Display.Driver NVI2 EULA.txt ListDevices.txt setup.cfg setup.exe"
     $DriverPackage = (Resolve-Path $DriverPackage)
@@ -136,22 +136,22 @@ function Expand-NvidiaDriverPackage (
     $7Zip = "$ENV:TEMP\7zr.exe"
     $SetupCfg = "$Output\setup.cfg"
     $PresentationsCfg = "$Output/NVI2/presentations.cfg"
-    if ($Components) {
+    if ($Full) {
+        Write-Output "Extraction Options: Full Driver Package" 
+        $ComponentsFolders = "" 
+    }
+    elseif ($Components -and !$Full) {
+        Write-Output: "Components Selected: $($Components -Join " | ")"
         $Components | ForEach-Object {
             switch ($_) {
                 "PhysX" { $ComponentsFolders += " $_" }
                 "HDAudio" { $ComponentsFolders += " $_" }
                 default { Write-Error "Invalid Component." -ErrorAction Stop } 
             }
-            Write-Output: "Component: $_"
         }
     }
 
     Write-Output "Extracting: `"$DriverPackage`""
-    if ($All) {
-        Write-Output "Components: All" 
-        $ComponentsFolders = "" 
-    }
     Write-Output "Extraction Directory: `"$Output`""
     Remove-Item $Output -Recurse -Force -ErrorAction SilentlyContinue
     (New-Object System.Net.WebClient).DownloadFile("https://www.7-zip.org/a/7zr.exe", $7Zip)
