@@ -49,7 +49,6 @@ function Get-NvidiaGpu {
         break
     } 
     Write-Error "No NVIDIA GPU found." -ErrorAction Stop
-    return
 }
 
 function Get-NvidiaDriverVersions (
@@ -77,6 +76,7 @@ function Invoke-NvidiaDriverPackage (
     [switch]$Studio, 
     [switch]$Standard,
     [switch]$Setup,
+    [switch]$Install,
     [switch]$All,
     [array]$Components = @()) {
     $DriverName = [System.Collections.ArrayList]@("Game Ready", "DCH")
@@ -119,7 +119,7 @@ Downloading: `"$(Split-Path $Output -Leaf)`""
                     (New-Object System.Net.WebClient).DownloadFile($DownloadLink, $Output)
                 }
                 Write-Output "Finished: Driver Package Downloaded."
-                Expand-NvidiaDriverPackage $Output -All: $All -Setup: $Setup $Components
+                Expand-NvidiaDriverPackage $Output -All: $All -Setup: $Setup -Install: $Install $Components
             }
         }
         catch [System.Net.WebException] {}
@@ -129,9 +129,11 @@ Downloading: `"$(Split-Path $Output -Leaf)`""
 function Expand-NvidiaDriverPackage (
     [Parameter(Mandatory = $True)]$DriverPackage,
     [switch]$Setup,
+    [switch]$Install,
     [switch]$All,
     [array]$Components = @()) {
     $ComponentsFolders = "Display.Driver NVI2 EULA.txt ListDevices.txt setup.cfg setup.exe"
+    $SetupArguments, $Wait = "", $False
     $DriverPackage = (Resolve-Path $DriverPackage)
     $Output = (Split-String $DriverPackage (Get-Item $DriverPackage).Extension 2)[0]
     $7Zip = "$ENV:TEMP\7zr.exe"
@@ -180,8 +182,12 @@ function Expand-NvidiaDriverPackage (
     Set-Content $PresentationsCfg $PresentationsCfgContent -Encoding Ascii
 
     Write-Output "Finished: The specified Driver Package has been Extracted."
-    if ($Setup) {
-        Start-Process "$Output\setup.exe" -ErrorAction SilentlyContinue
+    if ($Setup -or $Install) {
+        if ($Install) {
+            Write-Output "Installing: NVIDIA Driver Package..."
+            $SetupArguments = "/s"
+        $Wait = $True}
+        Start-Process "$Output\setup.exe" -ArgumentList $SetupArguments -Wait: $Wait -ErrorAction SilentlyContinue
     }
 }
 

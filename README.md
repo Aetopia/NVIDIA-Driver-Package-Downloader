@@ -18,6 +18,7 @@ A simple PowerShell script to extract and download NVIDIA driver packages.
         |-|-| 
         |`-DriverPackage <Driver Package File>` | NVIDIA driver package file to extract.|
         | `-Setup` | Launch the NVIDIA Driver Setup|
+        |`-Install` | Silently install an NVIDIA Driver Package.
         | `-All`|Extract all Driver Package components.|
         | `-Components <Component-1,Component-2, ...>`| Extract Driver Specific Components.|
 
@@ -29,6 +30,7 @@ A simple PowerShell script to extract and download NVIDIA driver packages.
         | `-Studio` | Studio driver type.|
         | `-Standard` | Standard driver type.|
         | `-Setup` | Launch the NVIDIA Driver Setup.|
+        | `-Install` | Silently install an NVIDIA Driver Package.|
         | `-All`|Extract all Driver Package components.|
         | `-Components <Component-1,Component-2, ...>` | Extract Driver Specific Components. |
     
