@@ -187,19 +187,16 @@ function Expand-NvidiaDriverPackage (
 function Get-NvidiaGpuProperties {
     $NvidiaGpuProperties = Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\????" -ErrorAction SilentlyContinue | 
     Where-Object { $_.MatchingDeviceId.StartsWith("pci\ven_10de") }
-
     return [ordered]@{
-        "Key"                            = $NvidiaGpuProperties.PSPath.TrimStart("Microsoft.PowerShell.Core\Registry::")
-        "Dynamic P-State"                = !$NvidiaGpuProperties.DisableDynamicPstate
-        "HDCP"                           = !$NvidiaGpuProperties.RMHdcpKeyglobZero
-        "NVIDIA Control Panel Telemetry" = [bool](Get-ItemProperty "HKLM:\SOFTWARE\NVIDIA Corporation\NvControlPanel2\Client" -ErrorAction SilentlyContinue).OptInOrOutPreference
-        "NVIDIA Service Telemetry"       = [bool](Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\nvlddmkm\Global\Startup" -ErrorAction SilentlyContinue).SendTelemetryData
+        "Key"             = $NvidiaGpuProperties.PSPath.TrimStart("Microsoft.PowerShell.Core\Registry::")
+        "Dynamic P-State" = !$NvidiaGpuProperties.DisableDynamicPstate
+        "HDCP"            = !$NvidiaGpuProperties.RMHdcpKeyglobZero
     };
 }
 
 function Set-NvidiaGpuProperty (
     [Parameter(Mandatory = $True)]
-    [ValidateSet("DynamicPState", "HDCP", "NVCPLTelemetry", "NVSTelemetry")]
+    [ValidateSet("DynamicPState", "HDCP")]
     [string]$Property,
     [Parameter(Mandatory = $True)][bool]$State) {
     $Key = (Get-NvidiaGpuProperties).Key 
@@ -208,11 +205,6 @@ function Set-NvidiaGpuProperty (
         switch ($Property.Trim()) {
             "DynamicPState" { New-ItemProperty "Registry::$Key" "DisableDynamicPstate" -Value $Value -PropertyType DWORD -Force } 
             "HDCP" { New-ItemProperty "Registry::$Key" "RMHdcpKeyglobZero" -Value $Value -PropertyType DWORD -Force } 
-            "NVCPLTelemetry" { 
-                New-Item "HKLM:\SOFTWARE\NVIDIA Corporation\NvControlPanel2\Client" -ErrorAction SilentlyContinue -Force | Out-Null
-                New-ItemProperty "HKLM:\SOFTWARE\NVIDIA Corporation\NvControlPanel2\Client" "OptInOrOutPreference" -Value (!$Value) -PropertyType DWORD -Force | Out-Null
-            } 
-            "NVSTelemetry" { New-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\nvlddmkm\Global\Startup" "SendTelemetryData" -Value (!$Value) -PropertyType DWORD -Force | Out-Null }
         }
     };
 }

@@ -50,6 +50,4 @@ A simple PowerShell script to extract and download NVIDIA driver packages.
         |Property|Description|
         |-|-|
         |`DynamicPState`| This property determines if a NVIDIA GPU should dynamically clock itself.|
-        |`HDCP`|This property determines if HDCP is enabled for DRM content.| 
-        |`NVCPLTelemetry`|This property determines if NVIDIA Control Panel has telemetry enabled or not.
-        |`NVSTelemetry`|This property determines if the NVIDIA Display Container LS Service has telemetry enabled or not.|
+        |`HDCP`|This property determines if HDCP is enabled for DRM content.|
