@@ -76,7 +76,7 @@ function Invoke-NvidiaDriverPackage (
     [switch]$Studio, 
     [switch]$Standard,
     [switch]$Setup,
-    [switch]$Full,
+    [switch]$All,
     [array]$Components = @()) {
     $DriverName = [System.Collections.ArrayList]@("Game Ready", "DCH")
     $Channel, $NSD = "", ""
@@ -118,7 +118,7 @@ Downloading: `"$(Split-Path $Output -Leaf)`""
                     (New-Object System.Net.WebClient).DownloadFile($DownloadLink, $Output)
                 }
                 Write-Output "Finished: Driver Package Downloaded."
-                Expand-NvidiaDriverPackage $Output -Full: $Full -Setup: $Setup $Components
+                Expand-NvidiaDriverPackage $Output -All: $All -Setup: $Setup $Components
             }
         }
         catch [System.Net.WebException] {}
@@ -128,7 +128,7 @@ Downloading: `"$(Split-Path $Output -Leaf)`""
 function Expand-NvidiaDriverPackage (
     [Parameter(Mandatory = $True)]$DriverPackage,
     [switch]$Setup,
-    [switch]$Full,
+    [switch]$All,
     [array]$Components = @()) {
     $ComponentsFolders = "Display.Driver NVI2 EULA.txt ListDevices.txt setup.cfg setup.exe"
     $DriverPackage = (Resolve-Path $DriverPackage)
@@ -136,11 +136,11 @@ function Expand-NvidiaDriverPackage (
     $7Zip = "$ENV:TEMP\7zr.exe"
     $SetupCfg = "$Output\setup.cfg"
     $PresentationsCfg = "$Output/NVI2/presentations.cfg"
-    if ($Full) {
-        Write-Output "Extraction Options: Full Driver Package" 
+    if ($All) {
+        Write-Output "Extraction Options: All Driver Components" 
         $ComponentsFolders = "" 
     }
-    elseif ($Components -and !$Full) {
+    elseif ($Components -and !$All) {
         Write-Output "Extraction Options: Display Driver | $($Components -Join " | ")"
         $Components | ForEach-Object {
             switch ($_) {
@@ -178,7 +178,7 @@ function Expand-NvidiaDriverPackage (
     }
     Set-Content $PresentationsCfg $PresentationsCfgContent -Encoding Ascii
 
-    Write-Output "Finished: Driver Package has been Extracted."
+    Write-Output "Finished: The specified Driver Package has been Extracted."
     if ($Setup) {
         Start-Process "$Output\setup.exe" -ErrorAction SilentlyContinue
     }
