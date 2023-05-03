@@ -49,6 +49,7 @@ function Get-NvidiaGpu {
         break
     } 
     Write-Error "No NVIDIA GPU found." -ErrorAction Stop
+    return
 }
 
 function Get-NvidiaDriverVersions (
@@ -188,9 +189,9 @@ function Get-NvidiaGpuProperties {
     $NvidiaGpuProperties = Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\????" -ErrorAction SilentlyContinue | 
     Where-Object { $_.MatchingDeviceId.StartsWith("pci\ven_10de") }
     return [ordered]@{
-        "Key"             = $NvidiaGpuProperties.PSPath.TrimStart("Microsoft.PowerShell.Core\Registry::")
+        "Key"           = $NvidiaGpuProperties.PSPath.TrimStart("Microsoft.PowerShell.Core\Registry::")
         "DynamicPState" = !$NvidiaGpuProperties.DisableDynamicPstate
-        "HDCP"            = !$NvidiaGpuProperties.RMHdcpKeyglobZero
+        "HDCP"          = !$NvidiaGpuProperties.RMHdcpKeyglobZero
     };
 }
 
@@ -203,8 +204,8 @@ function Set-NvidiaGpuProperty (
     $Value = (![int]$State)
     if ($Key) {
         switch ($Property.Trim()) {
-            "DynamicPState" { New-ItemProperty "Registry::$Key" "DisableDynamicPstate" -Value $Value -PropertyType DWORD -Force } 
-            "HDCP" { New-ItemProperty "Registry::$Key" "RMHdcpKeyglobZero" -Value $Value -PropertyType DWORD -Force } 
+            "DynamicPState" { New-ItemProperty "Registry::$Key" "DisableDynamicPstate" -Value $Value -PropertyType DWORD -Force | Out-Null } 
+            "HDCP" { New-ItemProperty "Registry::$Key" "RMHdcpKeyglobZero" -Value $Value -PropertyType DWORD -Force | Out-Null } 
         }
     };
 }
