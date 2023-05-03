@@ -189,7 +189,7 @@ function Get-NvidiaGpuProperties {
     Where-Object { $_.MatchingDeviceId.StartsWith("pci\ven_10de") }
     return [ordered]@{
         "Key"             = $NvidiaGpuProperties.PSPath.TrimStart("Microsoft.PowerShell.Core\Registry::")
-        "Dynamic P-State" = !$NvidiaGpuProperties.DisableDynamicPstate
+        "DynamicPState" = !$NvidiaGpuProperties.DisableDynamicPstate
         "HDCP"            = !$NvidiaGpuProperties.RMHdcpKeyglobZero
     };
 }
