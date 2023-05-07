@@ -75,8 +75,8 @@ function Invoke-NvidiaDriverPackage (
     [string]$Version = (Get-NvidiaDriverVersions $NvidiaGpu -Studio: $Studio -Standard: $Standard)[0],
     [switch]$Studio, 
     [switch]$Standard,
-    [switch]$Setup,
-    [switch]$Install,
+    [ValidateSet("Launch", "Install", "Open", $Null)]
+    [string]$Setup,
     [switch]$All,
     [array]$Components = @()) {
     $DriverName = [System.Collections.ArrayList]@("Game Ready", "DCH")
@@ -119,7 +119,7 @@ Downloading: `"$(Split-Path $Output -Leaf)`""
                     (New-Object System.Net.WebClient).DownloadFile($DownloadLink, $Output)
                 }
                 Write-Output "Finished: Driver Package Downloaded."
-                Expand-NvidiaDriverPackage $Output -All: $All -Setup: $Setup -Install: $Install $Components
+                Expand-NvidiaDriverPackage $Output -Setup: $Setup -All: $All $Components
             }
         }
         catch [System.Net.WebException] {}
@@ -128,12 +128,12 @@ Downloading: `"$(Split-Path $Output -Leaf)`""
 
 function Expand-NvidiaDriverPackage (
     [Parameter(Mandatory = $True)]$DriverPackage,
-    [switch]$Setup,
-    [switch]$Install,
+    [ValidateSet("Launch", "Install", "Open", $Null)]
+    [string]$Setup,
     [switch]$All,
     [array]$Components = @()) {
     $ComponentsFolders = "Display.Driver NVI2 EULA.txt ListDevices.txt setup.cfg setup.exe"
-    $SetupArguments, $Wait = "", $False
+    $SetupArguments, $Wait = " ", $False
     $DriverPackage = (Resolve-Path $DriverPackage)
     $Output = (Split-String $DriverPackage (Get-Item $DriverPackage).Extension 2)[0]
     $7Zip = "$ENV:TEMP\7zr.exe"
@@ -182,13 +182,16 @@ function Expand-NvidiaDriverPackage (
     Set-Content $PresentationsCfg $PresentationsCfgContent -Encoding Ascii
 
     Write-Output "Finished: The specified Driver Package has been Extracted."
-    if ($Setup -or $Install) {
-        if ($Install) {
+    if ($Setup -in "Launch", "Install") {
+        if ($Setup -eq "Install") {
             Write-Output "Installing: NVIDIA Driver Package..."
             $SetupArguments = "/s"
-        $Wait = $True}
+            $Wait = $True
+        }
         Start-Process "$Output\setup.exe" -ArgumentList $SetupArguments -Wait: $Wait -ErrorAction SilentlyContinue
+        if ($Setup -eq "Install") { Write-Output "Installed: NVIDIA Driver Package." }
     }
+    elseif ($Setup -eq "Open") { Start-Process "explorer.exe" "$Output" }
 }
 
 function Get-NvidiaGpuProperties {
