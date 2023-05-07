@@ -1,5 +1,5 @@
 if (!(New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Error "Administrator Permissions Required."
+    Write-Error "Administrator Permissions Required." -ErrorAction Stop
     return 
 }
 
@@ -76,7 +76,7 @@ function Invoke-NvidiaDriverPackage (
     [switch]$Studio, 
     [switch]$Standard,
     [ValidateSet("Launch", "Install", "Open", $Null)]
-    [string]$Setup,
+    [string]$Post,
     [switch]$All,
     [array]$Components = @()) {
     $DriverName = [System.Collections.ArrayList]@("Game Ready", "DCH")
@@ -119,7 +119,7 @@ Downloading: `"$(Split-Path $Output -Leaf)`""
                     (New-Object System.Net.WebClient).DownloadFile($DownloadLink, $Output)
                 }
                 Write-Output "Finished: Driver Package Downloaded."
-                Expand-NvidiaDriverPackage $Output -Setup: $Setup -All: $All $Components
+                Expand-NvidiaDriverPackage $Output -Post: $Post -All: $All $Components
             }
         }
         catch [System.Net.WebException] {}
@@ -129,15 +129,15 @@ Downloading: `"$(Split-Path $Output -Leaf)`""
 function Expand-NvidiaDriverPackage (
     [Parameter(Mandatory = $True)]$DriverPackage,
     [ValidateSet("Launch", "Install", "Open", $Null)]
-    [string]$Setup,
+    [string]$Post,
     [switch]$All,
     [array]$Components = @()) {
     $ComponentsFolders = "Display.Driver NVI2 EULA.txt ListDevices.txt setup.cfg setup.exe"
-    $SetupArguments, $Wait = " ", $False
+    $PostArguments, $Wait = " ", $False
     $DriverPackage = (Resolve-Path $DriverPackage)
     $Output = (Split-String $DriverPackage (Get-Item $DriverPackage).Extension 2)[0]
     $7Zip = "$ENV:TEMP\7zr.exe"
-    $SetupCfg = "$Output\setup.cfg"
+    $PostCfg = "$Output\setup.cfg"
     $PresentationsCfg = "$Output/NVI2/presentations.cfg"
     if ($All) {
         Write-Output "Extraction Options: All Driver Components" 
@@ -160,15 +160,15 @@ function Expand-NvidiaDriverPackage (
     (New-Object System.Net.WebClient).DownloadFile("https://www.7-zip.org/a/7zr.exe", $7Zip)
     Invoke-Expression "& `"$7Zip`" x -bso0 -bsp1 -bse1 -aoa `"$DriverPackage`" $ComponentsFolders -o`"$Output`"" 
 
-    $SetupCfgContent = [System.Collections.ArrayList](Get-Content $SetupCfg -Encoding Ascii)
-    foreach ($Index in 0..($SetupCfgContent.Count - 1)) {
-        if ($SetupCfgContent[$Index].Trim() -in @('<file name="${{EulaHtmlFile}}"/>', 
+    $PostCfgContent = [System.Collections.ArrayList](Get-Content $PostCfg -Encoding Ascii)
+    foreach ($Index in 0..($PostCfgContent.Count - 1)) {
+        if ($PostCfgContent[$Index].Trim() -in @('<file name="${{EulaHtmlFile}}"/>', 
                 '<file name="${{FunctionalConsentFile}}"/>'
                 '<file name="${{PrivacyPolicyFile}}"/>')) { 
-            $SetupCfgContent[$Index] = "" 
+            $PostCfgContent[$Index] = "" 
         }
     }
-    Set-Content $SetupCfg $SetupCfgContent -Encoding Ascii
+    Set-Content $PostCfg $PostCfgContent -Encoding Ascii
 
     $PresentationsCfgContent = [System.Collections.ArrayList](Get-Content $PresentationsCfg -Encoding Ascii)
     foreach ($Index in 0..($PresentationsCfgContent.Count - 1)) {
@@ -182,16 +182,16 @@ function Expand-NvidiaDriverPackage (
     Set-Content $PresentationsCfg $PresentationsCfgContent -Encoding Ascii
 
     Write-Output "Finished: The specified Driver Package has been Extracted."
-    if ($Setup -in "Launch", "Install") {
-        if ($Setup -eq "Install") {
+    if ($Post -in "Launch", "Install") {
+        if ($Post -eq "Install") {
             Write-Output "Installing: NVIDIA Driver Package..."
-            $SetupArguments = "/s"
+            $PostArguments = "/s"
             $Wait = $True
         }
-        Start-Process "$Output\setup.exe" -ArgumentList $SetupArguments -Wait: $Wait -ErrorAction SilentlyContinue
-        if ($Setup -eq "Install") { Write-Output "Installed: NVIDIA Driver Package." }
+        Start-Process "$Output\setup.exe" -ArgumentList $PostArguments -Wait: $Wait -ErrorAction SilentlyContinue
+        if ($Post -eq "Install") { Write-Output "Installed: NVIDIA Driver Package." }
     }
-    elseif ($Setup -eq "Open") { Start-Process "explorer.exe" "$Output" }
+    elseif ($Post -eq "Open") { Start-Process "explorer.exe" "$Output" }
 }
 
 function Get-NvidiaGpuProperties {
