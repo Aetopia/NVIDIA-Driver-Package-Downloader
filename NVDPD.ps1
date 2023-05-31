@@ -92,7 +92,7 @@ function Invoke-NvidiaDriverPackage (
         $Type = ""
         $DriverName[1] = "Standard" 
     }
-    if ((Get-CimInstance Win32_SystemEnclosure).ChassisTypes -in @(8, 9, 10, 11, 12, 14, 18, 21)) { $Platform = "notebook" }
+    if ([bool]((Get-CimInstance Win32_SystemEnclosure).ChassisTypes | Where-Object { $_ -in @(8, 9, 10, 11, 12, 14, 18, 21) })) { $Platform = "notebook" }
 
     if ($NvidiaGpu.Gpu.StartsWith("Quadro")) {
         $Channel = 'Quadro_Certified/'
